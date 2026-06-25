@@ -1,0 +1,30 @@
+{
+  "name": "airspace-dashboard",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Personal real-time airspace dashboard — traffic, weather, enrichment, ATC audio.",
+  "scripts": {
+    "dev": "next dev",
+    "dev:lan": "next dev -H 0.0.0.0",
+    "build": "next build",
+    "start": "next start",
+    "lint": "next lint",
+    "icons": "node scripts/gen-icons.mjs"
+  },
+  "dependencies": {
+    "leaflet": "^1.9.4",
+    "maplibre-gl": "^5.6.0",
+    "next": "^15.5.4",
+    "react": "^19.1.0",
+    "react-dom": "^19.1.0",
+    "zustand": "^5.0.8"
+  },
+  "devDependencies": {
+    "@types/leaflet": "^1.9.21",
+    "@types/node": "^22.10.0",
+    "@types/react": "^19.1.0",
+    "@types/react-dom": "^19.1.0",
+    "sharp": "^0.34.2",
+    "typescript": "^5.7.0"
+  }
+}
