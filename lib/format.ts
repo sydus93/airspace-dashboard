@@ -57,23 +57,31 @@ export function isAirlineCallsign(callsign: string | null): boolean {
   return /^[A-Z]{3}\d+[A-Z]?$/.test(callsign);
 }
 
-// Altitude -> color, matching the MapLibre marker ramp, for UI chips.
+// True emergency (vs. merely notable/military) — drives the terracotta glow.
+export function isEmergency(ac: Aircraft): boolean {
+  if (ac.emergency && ac.emergency !== "none") return true;
+  if (ac.squawk && EMERGENCY_SQUAWKS.has(ac.squawk)) return true;
+  return false;
+}
+
+// Hypsometric ramp ("The Chart"): low traffic reads warm-green like terrain,
+// high cruise goes cool turquoise like sky — the chart's own logic.
 export function altitudeColor(ac: Aircraft): string {
-  if (ac.onGround) return "#9aa0a6";
+  if (ac.onGround) return "#8aae6e";
   const a = ac.altBaroFt ?? 0;
-  const stops: [number, string][] = [
-    [0, "#f0502e"],
-    [5000, "#f5a623"],
-    [10000, "#7ed957"],
-    [20000, "#26c6da"],
-    [30000, "#4a90e2"],
-    [40000, "#9b8cff"],
-  ];
-  let color = stops[0][1];
-  for (const [alt, c] of stops) {
-    if (a >= alt) color = c;
-  }
-  return color;
+  if (a < 2000) return "#8aae6e"; // GND–2k  warm green
+  if (a < 8000) return "#a8c890"; // 2–8k    pale green
+  if (a < 15000) return "#c89858"; // 8–15k   amber
+  if (a < 25000) return "#c98a68"; // 15–25k  sienna
+  return "#5fb8c4"; //               > 25k    turquoise
+}
+
+// Final marker / glyph color, applying the signal overrides on top of altitude.
+export function markerColor(ac: Aircraft, selected = false): string {
+  if (selected) return "#f4ecd8"; // selected -> parchment ink
+  if (isEmergency(ac)) return "#db8e72"; // emergency -> terracotta (glow)
+  if (ac.isMilitary) return "#c98a68"; // military -> topo brown
+  return altitudeColor(ac);
 }
 
 export function timeAgo(epochMs: number): string {

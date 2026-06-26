@@ -4,11 +4,29 @@ import { useEffect, useRef, useState } from "react";
 import "leaflet/dist/leaflet.css";
 import type * as L from "leaflet";
 import { useAirspace, type HomePoint } from "@/store/useAirspace";
-import { altitudeColor, isNotable, aircraftLabel } from "@/lib/format";
+import { markerColor, isEmergency, isNotable, aircraftLabel } from "@/lib/format";
 import { BASEMAP, OVERLAYS } from "@/lib/mapLayers";
 import type { Aircraft, FlightRoute } from "@/lib/types";
 
 const NM_TO_M = 1852;
+
+// Phones bog down compositing hundreds of DOM markers per frame, so a busy scan
+// (e.g. 150 nm near a hub = 500+ contacts) renders only the nearest N — plus any
+// selected or notable contact, always kept. The status count still shows the true
+// total; this only bounds what's drawn.
+const MAX_MARKERS = 200;
+
+function capMarkers(all: Aircraft[], selectedHex: string | null): Aircraft[] {
+  if (all.length <= MAX_MARKERS) return all;
+  const keep: Aircraft[] = [];
+  const rest: Aircraft[] = [];
+  for (const a of all) {
+    if (a.hex === selectedHex || isNotable(a)) keep.push(a);
+    else rest.push(a);
+  }
+  rest.sort((x, y) => (x.distanceNm ?? Infinity) - (y.distanceNm ?? Infinity));
+  return keep.concat(rest).slice(0, MAX_MARKERS);
+}
 
 // top-down plane silhouette pointing north (rotated by CSS to the track angle)
 function planeSvg(): string {
@@ -50,16 +68,16 @@ export default function MapView() {
     for (const f of [0.34, 0.67, 1]) {
       Lm.circle([h.lat, h.lon], {
         radius: h.radiusNm * NM_TO_M * f,
-        color: "#3fd6c8",
-        weight: f === 1 ? 1.4 : 1,
-        opacity: f === 1 ? 0.5 : 0.22,
-        dashArray: "4 5",
+        color: "#8aae6e",
+        weight: f === 1 ? 1 : 0.8,
+        opacity: f === 1 ? 0.38 : 0.22,
+        dashArray: "3 5",
         fill: false,
         interactive: false,
       }).addTo(layer);
     }
     Lm.circleMarker([h.lat, h.lon], {
-      radius: 4, color: "#3fd6c8", fillColor: "#3fd6c8", fillOpacity: 0.9, weight: 1, interactive: false,
+      radius: 4, color: "#8aae6e", fillColor: "#8aae6e", fillOpacity: 0.9, weight: 1, interactive: false,
     }).addTo(layer);
     if (fit) {
       const b = ringBounds(h);
@@ -71,11 +89,11 @@ export default function MapView() {
     const root = m.getElement();
     if (!root) return;
     root.classList.toggle("selected", selected);
-    root.classList.toggle("notable", isNotable(ac));
+    root.classList.toggle("emergency", isEmergency(ac));
     const plane = root.querySelector(".ac-plane") as HTMLElement | null;
     if (plane) {
       plane.style.transform = `rotate(${ac.trackDeg ?? 0}deg)`;
-      plane.style.color = altitudeColor(ac);
+      plane.style.color = markerColor(ac, selected);
     }
     const tag = root.querySelector(".ac-tag") as HTMLElement | null;
     if (tag) tag.textContent = selected || isNotable(ac) ? aircraftLabel(ac) : "";
@@ -86,7 +104,7 @@ export default function MapView() {
     const layer = acLayerRef.current;
     if (!Lm || !layer || !readyRef.current) return;
     const { frame, selectedHex } = useAirspace.getState();
-    const list = frame?.aircraft ?? [];
+    const list = capMarkers(frame?.aircraft ?? [], selectedHex);
     const seen = new Set<string>();
     for (const ac of list) {
       seen.add(ac.hex);
@@ -133,11 +151,11 @@ export default function MapView() {
           [route.origin.lat, route.origin.lon],
           [route.destination.lat, route.destination.lon],
         ],
-        { color: "#f5d142", weight: 2, opacity: 0.8, interactive: false }
+        { color: "#c98a68", weight: 1.5, opacity: 0.8, dashArray: "4 4", interactive: false }
       ).addTo(layer);
       for (const ap of [route.origin, route.destination]) {
         Lm.circleMarker([ap.lat, ap.lon], {
-          radius: 5, color: "#f5d142", weight: 2, fillColor: "#0a0e14", fillOpacity: 1, interactive: false,
+          radius: 5, color: "#c98a68", weight: 1.5, fillColor: "#101218", fillOpacity: 1, interactive: false,
         })
           .addTo(layer)
           .bindTooltip(ap.iata || ap.icao, { permanent: true, direction: "top", className: "ap-tip", offset: [0, -4] });
@@ -149,7 +167,7 @@ export default function MapView() {
           [ac.lat, ac.lon],
           [route.destination.lat, route.destination.lon],
         ],
-        { color: "#f5d142", weight: 1, opacity: 0.5, dashArray: "3 4", interactive: false }
+        { color: "#c98a68", weight: 1, opacity: 0.5, dashArray: "3 4", interactive: false }
       ).addTo(layer);
     }
   }
@@ -274,6 +292,13 @@ export default function MapView() {
   return (
     <div className="map-wrap">
       <div ref={containerRef} className="map-root" />
+      {/* VOR sweep — the one ambient motion (leading arm + trailing afterglow) */}
+      <div className="vor-sweep" aria-hidden>
+        <div className="sweep-rot">
+          <div className="sweep-trail" />
+          <div className="sweep-arm" />
+        </div>
+      </div>
       {!tilesOk && (
         <div className="map-note subtle">Basemap tiles unavailable — traffic still live.</div>
       )}

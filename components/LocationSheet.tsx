@@ -45,9 +45,9 @@ export default function LocationSheet({
   return (
     <>
       <div className="sheet-scrim" onClick={onClose} />
-      <div className="loc-sheet" role="dialog" aria-label="Location">
+      <div className="loc-sheet glass no-strip" role="dialog" aria-label="Location">
         <div className="loc-head">
-          <span>SCAN LOCATION</span>
+          <span className="panel-kicker">Scan location</span>
           <button className="icon-btn" onClick={onClose} aria-label="close">✕</button>
         </div>
 

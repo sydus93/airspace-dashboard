@@ -4,6 +4,7 @@ import { useState } from "react";
 import MapView from "@/components/MapView";
 import StatusBar from "@/components/StatusBar";
 import WeatherPanel from "@/components/WeatherPanel";
+import OverheadNow from "@/components/OverheadNow";
 import TargetCard from "@/components/TargetCard";
 import AudioBar from "@/components/AudioBar";
 import Poller from "@/components/Poller";
@@ -27,6 +28,7 @@ export default function Home() {
         onOpenLocation={() => setLocationOpen(true)}
       />
       <WeatherPanel open={weatherOpen} onClose={() => setWeatherOpen(false)} />
+      {!weatherOpen && <OverheadNow />}
 
       <ScanAreaPill />
       <MapOverlays />

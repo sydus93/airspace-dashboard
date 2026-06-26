@@ -5,8 +5,8 @@
   "start_url": "/",
   "scope": "/",
   "display": "standalone",
-  "background_color": "#05080c",
-  "theme_color": "#05080c",
+  "background_color": "#16181d",
+  "theme_color": "#16181d",
   "orientation": "any",
   "categories": ["navigation", "utilities", "travel"],
   "icons": [

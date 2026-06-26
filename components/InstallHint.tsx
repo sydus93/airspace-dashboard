@@ -25,7 +25,7 @@ export default function InstallHint() {
 
   if (!show) return null;
   return (
-    <div className="install-hint">
+    <div className="install-hint glass no-strip">
       <div>
         Install: tap <strong>Share</strong> <span aria-hidden>⎙</span> →{" "}
         <strong>Add to Home Screen</strong> for a full-screen airspace view.

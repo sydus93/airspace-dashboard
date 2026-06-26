@@ -22,7 +22,7 @@ export const metadata: Metadata = {
 };
 
 export const viewport: Viewport = {
-  themeColor: "#05080c",
+  themeColor: "#16181d",
   width: "device-width",
   initialScale: 1,
   maximumScale: 1,
@@ -35,7 +35,7 @@ export default function RootLayout({
 }: Readonly<{ children: React.ReactNode }>) {
   return (
     <html lang="en">
-      <body>{children}</body>
+      <body data-mode="sectional">{children}</body>
     </html>
   );
 }

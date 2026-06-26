@@ -30,31 +30,33 @@ export default function StatusBar({
   const live = lastAt > 0 && !stale;
 
   return (
-    <header className="statusbar">
-      <button className="sb-left" onClick={onOpenLocation} aria-label="change scan location">
-        <span className={`sb-dot ${live ? "live" : "stale"}`} aria-hidden />
-        <div className="sb-title">
-          <strong>AIRSPACE</strong>
-          <span className="sb-home">{home.label} · {home.radiusNm} nm ▾</span>
-        </div>
+    <header className="topstrip">
+      <button className="ts-left" onClick={onOpenLocation} aria-label="change scan location">
+        <span className="ts-brand">
+          <span className={`ts-dot ${live ? "live" : "stale"}`} aria-hidden />
+          <span className="ts-wordmark">AIRSPACE</span>
+        </span>
+        <span className="ts-loc">
+          {home.label} <span className="dim">· {home.radiusNm} nm ▾</span>
+        </span>
       </button>
 
-      <div className="sb-right">
-        <div className="sb-stat">
-          <span className="sb-num">{count}</span>
-          <span className="sb-lbl">aircraft</span>
+      <div className="ts-right">
+        <div className="ts-count">
+          <span className="ts-count-num">{count}</span>
+          <span className="ts-count-lbl">aircraft</span>
         </div>
         {notable > 0 && (
-          <div className="sb-alert" title="notable contacts">
-            ⚠ {notable}
-          </div>
+          <span className="ts-notable" title="notable contacts">
+            {notable}<span className="ts-notable-lbl"> notable</span>
+          </span>
         )}
-        <div className="sb-age">
+        <span className="ts-age">
           {lastAt > 0 ? timeAgo(lastAt) : "connecting…"}
-          {stale && <span className="sb-stale-tag">STALE</span>}
-        </div>
+          {stale && <span className="stale">STALE</span>}
+        </span>
         <button
-          className={`sb-wx ${weatherOpen ? "on" : ""}`}
+          className={`ts-wx ${weatherOpen ? "on" : ""}`}
           onClick={onToggleWeather}
           aria-pressed={weatherOpen}
         >

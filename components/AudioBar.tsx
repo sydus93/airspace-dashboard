@@ -48,7 +48,7 @@ export default function AudioBar() {
   };
 
   return (
-    <div className="audiobar">
+    <div className="audiobar glass">
       <div className="ab-main">
         <button
           className={`ab-power ${playing ? "on" : ""}`}
@@ -56,7 +56,7 @@ export default function AudioBar() {
           aria-label={playing ? "stop" : "audio"}
           title={playing ? "Stop" : "ATC audio"}
         >
-          {pstate.status === "loading" ? "…" : playing ? "■" : "📻"}
+          {pstate.status === "loading" ? "…" : playing ? "■" : "▸"}
         </button>
 
         <div className="ab-now" onClick={() => setExpanded((e) => !e)}>
