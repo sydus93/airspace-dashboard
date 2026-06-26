@@ -5,8 +5,8 @@ import "leaflet/dist/leaflet.css";
 import type * as L from "leaflet";
 import { useAirspace, type HomePoint } from "@/store/useAirspace";
 import { markerColor, isEmergency, isNotable, aircraftLabel } from "@/lib/format";
-import { BASEMAP, OVERLAYS } from "@/lib/mapLayers";
-import type { Aircraft, FlightRoute } from "@/lib/types";
+import { getBasemap, OVERLAYS } from "@/lib/mapLayers";
+import type { Aircraft, FlightRoute, AirportLayout } from "@/lib/types";
 
 const NM_TO_M = 1852;
 
@@ -15,6 +15,31 @@ const NM_TO_M = 1852;
 // selected or notable contact, always kept. The status count still shows the true
 // total; this only bounds what's drawn.
 const MAX_MARKERS = 200;
+
+// Below this zoom the OSM aeroway detail is too coarse to be useful (and the
+// bbox too large), so we show a "zoom in" hint instead of fetching.
+const AIRPORT_MIN_Z = 13;
+
+function renderAirportLayer(Lm: typeof L, layer: L.LayerGroup, data: AirportLayout) {
+  layer.clearLayers();
+  const order = { apron: 0, taxiway: 1, runway: 2 };
+  const feats = [...data.features].sort((a, b) => order[a.kind] - order[b.kind]);
+  for (const f of feats) {
+    if (f.kind === "apron") {
+      Lm.polygon(f.coords, {
+        color: "#5a564f", weight: 0.6, opacity: 0.45,
+        fillColor: "#8a8278", fillOpacity: 0.12, interactive: false,
+      }).addTo(layer);
+    } else if (f.kind === "taxiway") {
+      Lm.polyline(f.coords, { color: "#c89858", weight: 1.6, opacity: 0.55, interactive: false }).addTo(layer);
+    } else {
+      const pl = Lm.polyline(f.coords, {
+        color: "#f4ecd8", weight: 4, opacity: 0.9, lineCap: "butt", interactive: false,
+      }).addTo(layer);
+      if (f.ref) pl.bindTooltip(f.ref, { permanent: true, direction: "center", className: "rwy-label" });
+    }
+  }
+}
 
 function capMarkers(all: Aircraft[], selectedHex: string | null): Aircraft[] {
   if (all.length <= MAX_MARKERS) return all;
@@ -45,9 +70,15 @@ export default function MapView() {
   const routeLayerRef = useRef<L.LayerGroup | null>(null);
   const overlayLayersRef = useRef<Map<string, L.TileLayer>>(new Map());
   const refreshTimersRef = useRef<Map<string, ReturnType<typeof setInterval>>>(new Map());
+  const baseRef = useRef<L.TileLayer | null>(null);
+  const baseIdRef = useRef<string>("");
+  const airportLayerRef = useRef<L.LayerGroup | null>(null);
+  const airportKeyRef = useRef<string>("");
   const LRef = useRef<typeof L | null>(null);
 
   const [tilesOk, setTilesOk] = useState(true);
+  const [lightBase, setLightBase] = useState(false);
+  const [airportHint, setAirportHint] = useState(false);
 
   function ringBounds(h: HomePoint): [[number, number], [number, number]] {
     const dLat = h.radiusNm / 60;
@@ -172,6 +203,49 @@ export default function MapView() {
     }
   }
 
+  function applyBasemap() {
+    const Lm = LRef.current;
+    const map = mapRef.current;
+    if (!Lm || !map) return;
+    const id = useAirspace.getState().basemap;
+    if (id === baseIdRef.current && baseRef.current) return;
+    const def = getBasemap(id);
+    // Leaflet won't issue requests for a root-relative tile template; resolve our
+    // same-origin proxy URL to an absolute one against the page origin.
+    const url =
+      def.url.startsWith("/") && typeof window !== "undefined"
+        ? window.location.origin + def.url
+        : def.url;
+    const next = Lm.tileLayer(url, {
+      // never pass undefined — it overrides Leaflet's default 'abc' and then
+      // _getSubdomain() throws on `.length` for templates without an {s} token
+      subdomains: def.subdomains ?? "abc",
+      attribution: def.attribution,
+      maxZoom: def.maxZoom,
+      maxNativeZoom: def.maxNativeZoom,
+      minNativeZoom: def.minNativeZoom,
+      detectRetina: !!def.detectRetina,
+      zIndex: 0,
+    });
+    let tileFails = 0;
+    next.on("tileerror", () => {
+      if (++tileFails > 6) setTilesOk(false);
+    });
+    next.on("load", () => setTilesOk(true));
+    next.addTo(map);
+    // keep the old base until the new one paints, to avoid a flash to bg color
+    const prev = baseRef.current;
+    const dropPrev = () => {
+      if (prev && map.hasLayer(prev)) map.removeLayer(prev);
+    };
+    next.once("load", dropPrev);
+    setTimeout(dropPrev, 1500);
+    baseRef.current = next;
+    baseIdRef.current = id;
+    setLightBase(!!def.light);
+    setTilesOk(true);
+  }
+
   function syncOverlays() {
     const Lm = LRef.current;
     const map = mapRef.current;
@@ -201,6 +275,45 @@ export default function MapView() {
     }
   }
 
+  async function syncAirports() {
+    const Lm = LRef.current;
+    const map = mapRef.current;
+    const layer = airportLayerRef.current;
+    if (!Lm || !map || !layer || !readyRef.current) return;
+    const on = useAirspace.getState().overlays.airports;
+    if (!on) {
+      if (airportKeyRef.current) {
+        layer.clearLayers();
+        airportKeyRef.current = "";
+      }
+      setAirportHint(false);
+      return;
+    }
+    if (map.getZoom() < AIRPORT_MIN_Z) {
+      if (airportKeyRef.current) {
+        layer.clearLayers();
+        airportKeyRef.current = "";
+      }
+      setAirportHint(true);
+      return;
+    }
+    setAirportHint(false);
+    const b = map.getBounds();
+    const bbox: [number, number, number, number] = [b.getSouth(), b.getWest(), b.getNorth(), b.getEast()];
+    const key = bbox.map((x) => x.toFixed(2)).join(",");
+    if (key === airportKeyRef.current) return; // already showing this area
+    airportKeyRef.current = key;
+    try {
+      const res = await fetch(`/api/airport-layout?bbox=${bbox.join(",")}`);
+      const env = (await res.json()) as { data: AirportLayout };
+      // bail if the user toggled off or panned away while we were fetching
+      if (!useAirspace.getState().overlays.airports || airportKeyRef.current !== key) return;
+      renderAirportLayer(Lm, layer, env.data);
+    } catch {
+      airportKeyRef.current = ""; // allow a retry on next move
+    }
+  }
+
   // init once
   useEffect(() => {
     let cancelled = false;
@@ -220,21 +333,12 @@ export default function MapView() {
       }).setView([h.lat, h.lon], 8);
       mapRef.current = map;
 
-      const base = Lm.tileLayer(BASEMAP.url, {
-        subdomains: BASEMAP.subdomains,
-        attribution: BASEMAP.attribution,
-        maxZoom: BASEMAP.maxZoom,
-        detectRetina: true,
-      }).addTo(map);
-      let tileFails = 0;
-      base.on("tileerror", () => {
-        if (++tileFails > 4) setTilesOk(false);
-      });
-      base.on("load", () => setTilesOk(true));
+      applyBasemap();
 
       Lm.control.zoom({ position: "bottomright" }).addTo(map);
 
       homeLayerRef.current = Lm.layerGroup().addTo(map);
+      airportLayerRef.current = Lm.layerGroup().addTo(map);
       routeLayerRef.current = Lm.layerGroup().addTo(map);
       acLayerRef.current = Lm.layerGroup().addTo(map);
 
@@ -242,6 +346,7 @@ export default function MapView() {
       map.on("moveend", () => {
         const c = map.getCenter();
         useAirspace.getState().setMapCenter(c.lat, c.lng);
+        syncAirports();
       });
 
       readyRef.current = true;
@@ -249,6 +354,7 @@ export default function MapView() {
       pushAircraft();
       pushRoute();
       syncOverlays();
+      syncAirports();
       // Leaflet sometimes needs a nudge if the container sized after init
       setTimeout(() => map.invalidateSize(), 200);
     })();
@@ -259,6 +365,11 @@ export default function MapView() {
       refreshTimersRef.current.clear();
       overlayLayersRef.current.clear();
       markersRef.current.clear();
+      // reset basemap/airport identity so a StrictMode remount rebuilds them on
+      // the new map (else applyBasemap early-returns and the map has no tiles)
+      baseRef.current = null;
+      baseIdRef.current = "";
+      airportKeyRef.current = "";
       readyRef.current = false;
       mapRef.current?.remove();
       mapRef.current = null;
@@ -268,9 +379,11 @@ export default function MapView() {
   // react to store changes
   useEffect(() => {
     const unsub = useAirspace.subscribe((state) => {
+      applyBasemap();
       pushAircraft();
       pushRoute();
       syncOverlays();
+      syncAirports();
       if (state.home !== lastHomeRef.current) {
         lastHomeRef.current = state.home;
         pushHome(true);
@@ -290,7 +403,7 @@ export default function MapView() {
   }, [selectedHex, follow]);
 
   return (
-    <div className="map-wrap">
+    <div className={`map-wrap${lightBase ? " basemap-light" : ""}`}>
       <div ref={containerRef} className="map-root" />
       {/* VOR sweep — the one ambient motion (leading arm + trailing afterglow) */}
       <div className="vor-sweep" aria-hidden>
@@ -301,6 +414,9 @@ export default function MapView() {
       </div>
       {!tilesOk && (
         <div className="map-note subtle">Basemap tiles unavailable — traffic still live.</div>
+      )}
+      {airportHint && (
+        <div className="map-note subtle">Zoom in over an airport to see runways &amp; taxiways.</div>
       )}
     </div>
   );

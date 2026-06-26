@@ -105,6 +105,19 @@ export interface FlightRoute {
   destination: Airport | null;
 }
 
+// Airport ground layout from OSM aeroway data (runways/taxiways/aprons).
+export interface AirportFeature {
+  kind: "runway" | "taxiway" | "apron";
+  coords: [number, number][]; // [lat, lon] polyline (runway/taxiway) or ring (apron)
+  ref: string | null; // runway designator e.g. "10/28"
+  surface: string | null;
+}
+
+export interface AirportLayout {
+  features: AirportFeature[];
+  bbox: [number, number, number, number]; // s,w,n,e
+}
+
 export type AudioBackend = "local-icecast" | "remote-stream";
 
 export interface AudioChannel {

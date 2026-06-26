@@ -50,9 +50,11 @@ export interface AirspaceState {
   // ui
   followSelected: boolean;
   overlays: Record<string, boolean>; // weather overlay id -> enabled
+  basemap: string; // active basemap id (see lib/mapLayers BASEMAPS)
 
   // actions
   toggleOverlay: (id: string) => void;
+  setBasemap: (id: string) => void;
   setHome: (lat: number, lon: number, opts?: { radiusNm?: number; label?: string }) => void;
   setRadius: (radiusNm: number) => void;
   setMapCenter: (lat: number, lon: number) => void;
@@ -88,10 +90,13 @@ export const useAirspace = create<AirspaceState>()(
       enrichments: {},
 
       followSelected: false,
-      overlays: { radar: false, satellite: false },
+      overlays: { radar: false, satellite: false, airports: false },
+      basemap: "dark",
 
       toggleOverlay: (id) =>
         set((s) => ({ overlays: { ...s.overlays, [id]: !s.overlays[id] } })),
+
+      setBasemap: (id) => set({ basemap: id }),
 
       setHome: (lat, lon, opts) =>
         set((s) => ({
@@ -157,8 +162,8 @@ export const useAirspace = create<AirspaceState>()(
     }),
     {
       name: "airspace-home",
-      // only the chosen location + overlay prefs are durable; live data is re-fetched
-      partialize: (s) => ({ home: s.home, overlays: s.overlays }),
+      // only the chosen location + display prefs are durable; live data is re-fetched
+      partialize: (s) => ({ home: s.home, overlays: s.overlays, basemap: s.basemap }),
     }
   )
 );

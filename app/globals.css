@@ -557,6 +557,43 @@ button { font-family: inherit; cursor: pointer; }
 .layer-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--fg-4); }
 .layer-btn.on .layer-dot { background: var(--vor); box-shadow: 0 0 6px var(--vor); }
 
+/* basemap segmented switch */
+.basemap-switch {
+  display: inline-flex; gap: 2px; padding: 3px;
+  background: rgba(16, 18, 24, 0.55);
+  backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px);
+  border: 0.5px solid rgba(244, 236, 216, 0.08);
+  border-radius: 999px;
+}
+.bm-btn {
+  font-family: var(--sans); font-size: 11px; font-weight: 600;
+  color: var(--fg-3); background: transparent; border: none;
+  padding: 6px 12px; border-radius: 999px;
+}
+.bm-btn.on { color: var(--sky); background: var(--vor); }
+
+/* Light/sectional basemaps: give markers a bright halo so they don't wash out,
+   dark tags, and dim the green sweep so it doesn't tint the chart. */
+.map-wrap.basemap-light .ac-plane {
+  filter: drop-shadow(0 0 1.5px #fff) drop-shadow(0 0 1px rgba(0, 0, 0, 0.55));
+}
+.map-wrap.basemap-light .ac-tag { color: #16181d; text-shadow: 0 0 3px #fff, 0 0 3px #fff; }
+.map-wrap.basemap-light .vor-sweep { opacity: 0.3; }
+.map-wrap.basemap-light .ac-divicon.selected::after {
+  border-color: rgba(20, 22, 28, 0.65); box-shadow: 0 0 8px rgba(0, 0, 0, 0.3);
+}
+
+/* airport layout vectors (runways/taxiways) — labels */
+.rwy-label {
+  background: rgba(16, 18, 24, 0.82) !important;
+  border: 0.5px solid var(--vor) !important;
+  color: var(--vor) !important;
+  font-family: var(--sans); font-size: 10px; font-weight: 600; letter-spacing: 0.05em;
+  border-radius: 4px !important; padding: 1px 5px !important;
+  box-shadow: none !important;
+}
+.rwy-label::before { display: none !important; }
+
 /* ============================================================
    LOCATION SHEET
    ============================================================ */
