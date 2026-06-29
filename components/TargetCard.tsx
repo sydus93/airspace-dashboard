@@ -10,6 +10,7 @@ import {
   speedText,
   verticalRateText,
 } from "@/lib/format";
+import { identify, planespottersUrl, wikipediaUrl } from "@/lib/aircraftTypes";
 
 export default function TargetCard() {
   const selectedHex = useAirspace((s) => s.selectedHex);
@@ -39,7 +40,14 @@ export default function TargetCard() {
   const reason = notableReason(ac);
   const info = enr?.info;
   const route = enr?.route;
-  const typeLine = info?.typeName || ac.description || ac.typeCode || "Unknown type";
+  // Identity / "learn" layer: best human name, spotter class, recognition hint.
+  const id = identify({
+    typeCode: ac.typeCode,
+    description: ac.description,
+    category: ac.category,
+    isMilitary: ac.isMilitary,
+  });
+  const typeLine = id.info ? id.name : info?.typeName || id.name;
   const operator = route?.airlineName || info?.owner || ac.ownerOp;
   const sub = operator ? `${typeLine} · ${operator}` : typeLine;
   const owner = info?.owner || ac.ownerOp;
@@ -53,7 +61,15 @@ export default function TargetCard() {
           {ac.registration && ac.registration !== aircraftLabel(ac) && (
             <span className="t-reg">{ac.registration}</span>
           )}
-          <div className="t-sub">{sub}</div>
+          <div className="t-sub">
+            <span
+              className="t-class-chip"
+              style={{ color: id.meta.color, borderColor: id.meta.color }}
+            >
+              {id.meta.label}
+            </span>
+            {sub}
+          </div>
         </div>
         <div className="t-head-actions">
           {ac.isMilitary && <span className="tag-badge mil">MIL</span>}
@@ -102,6 +118,28 @@ export default function TargetCard() {
       )}
 
       <RouteBlock route={route} loading={enr?.routeLoading} />
+
+      <div className="t-learn">
+        <div className="t-learn-recog">{id.recog || id.meta.blurb}</div>
+        <div className="t-learn-links">
+          <a
+            className="t-learn-link"
+            href={planespottersUrl(ac.registration, ac.hex)}
+            target="_blank"
+            rel="noopener noreferrer"
+          >
+            Photos ↗
+          </a>
+          <a
+            className="t-learn-link"
+            href={wikipediaUrl(id.info, id.name)}
+            target="_blank"
+            rel="noopener noreferrer"
+          >
+            About this type ↗
+          </a>
+        </div>
+      </div>
 
       <div className="t-hex">ICAO {ac.hex.toUpperCase()}</div>
     </section>

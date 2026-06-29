@@ -8,6 +8,7 @@ import {
   bearingText,
 } from "@/lib/format";
 import type { Aircraft } from "@/lib/types";
+import { identify } from "@/lib/aircraftTypes";
 import PlaneGlyph from "@/components/PlaneGlyph";
 
 // "Overhead now" — the floating glass rail (top-right, desktop). Closest traffic
@@ -92,7 +93,14 @@ function altDisplay(ac: Aircraft): string {
 }
 
 function typeLine(ac: Aircraft): string {
-  return ac.description || ac.typeCode || "Unknown type";
+  const id = identify({
+    typeCode: ac.typeCode,
+    description: ac.description,
+    category: ac.category,
+    isMilitary: ac.isMilitary,
+  });
+  // Prefer the curated friendly name; fall back to the feed's raw description.
+  return id.info ? id.name : ac.description || ac.typeCode || "Unknown type";
 }
 
 function badge(ac: Aircraft) {
