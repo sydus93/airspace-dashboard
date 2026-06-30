@@ -92,6 +92,12 @@ export function buildSkyContacts(
   return out.sort((a, b) => a.slantRangeNm - b.slantRangeNm);
 }
 
+// Signed smallest difference a − b, degrees, in (−180, 180]. Handles the 0/360
+// wrap — used to measure how far a contact's bearing is from where you're aimed.
+export function angleDiff(a: number, b: number): number {
+  return ((((a - b) % 360) + 540) % 360) - 180;
+}
+
 // Dome projection: looking up, zenith at the center, horizon at the rim. Returns a
 // point on a unit dome centered at (0,0) with N up, E right (a top-down compass
 // reading — Tier 1 will rotate the ring to match where the phone points). Multiply

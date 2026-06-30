@@ -26,6 +26,10 @@ export interface AppConfig {
   presets: LocationPreset[];
   // Cap markers rendered for performance on phones (busy airspace near hubs).
   maxAircraft: number;
+  // Magnetic declination at the home area, degrees to ADD to a magnetic heading to
+  // get true north (negative = west). Used by the Sky HUD compass on the non-iOS
+  // path (iOS's webkitCompassHeading is already OS-corrected). ~13°W near Albany.
+  magneticDeclinationDeg: number;
 }
 
 export const config: AppConfig = {
@@ -81,6 +85,7 @@ export const config: AppConfig = {
     { label: "NYC Metro (KJFK)", lat: 40.6413, lon: -73.7781, radiusNm: 60 },
   ],
   maxAircraft: 600,
+  magneticDeclinationDeg: -13,
 };
 
 // Hosts the audio proxy is willing to fetch (SSRF guard). Configured Icecast

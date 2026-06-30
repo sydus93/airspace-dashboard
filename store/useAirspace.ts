@@ -51,6 +51,7 @@ export interface AirspaceState {
   followSelected: boolean;
   overlays: Record<string, boolean>; // weather overlay id -> enabled
   basemap: string; // active basemap id (see lib/mapLayers BASEMAPS)
+  skyHeadingOffset: number; // manual Sky HUD compass fine-tune, degrees (persisted)
 
   // actions
   toggleOverlay: (id: string) => void;
@@ -66,6 +67,8 @@ export interface AirspaceState {
   setRoute: (hex: string, route: FlightRoute | null) => void;
   setRouteLoading: (hex: string, loading: boolean) => void;
   setFollow: (v: boolean) => void;
+  nudgeSkyHeadingOffset: (delta: number) => void;
+  resetSkyHeadingOffset: () => void;
 }
 
 const clampRadius = (r: number) => Math.min(250, Math.max(5, Math.round(r)));
@@ -92,6 +95,7 @@ export const useAirspace = create<AirspaceState>()(
       followSelected: false,
       overlays: { radar: false, satellite: false, airports: false },
       basemap: "dark",
+      skyHeadingOffset: 0,
 
       toggleOverlay: (id) =>
         set((s) => ({ overlays: { ...s.overlays, [id]: !s.overlays[id] } })),
@@ -159,11 +163,20 @@ export const useAirspace = create<AirspaceState>()(
         })),
 
       setFollow: (v) => set({ followSelected: v }),
+
+      nudgeSkyHeadingOffset: (delta) =>
+        set((s) => ({ skyHeadingOffset: Math.round((((s.skyHeadingOffset + delta) % 360) + 360) % 360) })),
+      resetSkyHeadingOffset: () => set({ skyHeadingOffset: 0 }),
     }),
     {
       name: "airspace-home",
       // only the chosen location + display prefs are durable; live data is re-fetched
-      partialize: (s) => ({ home: s.home, overlays: s.overlays, basemap: s.basemap }),
+      partialize: (s) => ({
+        home: s.home,
+        overlays: s.overlays,
+        basemap: s.basemap,
+        skyHeadingOffset: s.skyHeadingOffset,
+      }),
     }
   )
 );
