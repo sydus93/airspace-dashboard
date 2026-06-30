@@ -8,10 +8,14 @@ export default function StatusBar({
   onToggleWeather,
   weatherOpen,
   onOpenLocation,
+  onToggleSky,
+  skyOpen,
 }: {
   onToggleWeather: () => void;
   weatherOpen: boolean;
   onOpenLocation: () => void;
+  onToggleSky: () => void;
+  skyOpen: boolean;
 }) {
   const frame = useAirspace((s) => s.frame);
   const stale = useAirspace((s) => s.trafficStale);
@@ -55,6 +59,14 @@ export default function StatusBar({
           {lastAt > 0 ? timeAgo(lastAt) : "connecting…"}
           {stale && <span className="stale">STALE</span>}
         </span>
+        <button
+          className={`ts-wx ${skyOpen ? "on" : ""}`}
+          onClick={onToggleSky}
+          aria-pressed={skyOpen}
+          title="Sky compass — where to look up"
+        >
+          SKY
+        </button>
         <button
           className={`ts-wx ${weatherOpen ? "on" : ""}`}
           onClick={onToggleWeather}

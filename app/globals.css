@@ -659,3 +659,69 @@ button { font-family: inherit; cursor: pointer; }
   font-family: var(--serif); font-size: 14px; color: var(--fg-1);
   max-width: calc(100vw - 24px);
 }
+
+/* ============================================================
+   SKY HUD — "sky compass" (Tier 0)
+   ============================================================ */
+.sky-hud {
+  position: fixed; inset: 0; z-index: 42;
+  display: flex; flex-direction: column;
+  padding: calc(var(--safe-top) + 12px) calc(var(--safe-right) + 14px)
+           calc(var(--safe-bottom) + 14px) calc(var(--safe-left) + 14px);
+  /* opaque takeover — "sky mode" fully covers the map & bottom chrome */
+  background: radial-gradient(125% 85% at 50% 16%, #242a34 0%, #14161c 55%, #0c0e14 100%);
+  animation: sky-fade 0.22s var(--ease);
+}
+@keyframes sky-fade { from { opacity: 0; } to { opacity: 1; } }
+
+.sky-head { display: flex; align-items: flex-start; justify-content: space-between; }
+.sky-title { display: flex; flex-direction: column; gap: 3px; }
+.sky-sub { font-family: var(--serif); font-style: italic; font-size: 13px; color: var(--fg-3); }
+
+.sky-stage {
+  position: relative; align-self: center; margin: auto;
+  width: min(88vw, 56vh); height: min(88vw, 56vh);
+}
+.sky-dome { width: 100%; height: 100%; overflow: visible; display: block; }
+
+.sky-ring { fill: none; stroke: var(--rule-faint); stroke-width: 0.5; }
+.sky-ring.rim { stroke: var(--rule); stroke-width: 0.9; }
+.sky-spoke { stroke: var(--rule-faint); stroke-width: 0.4; }
+.sky-spoke.card { stroke: var(--rule); stroke-width: 0.5; }
+.sky-ring-lbl { fill: var(--fg-4); font-family: var(--mono); font-size: 4.4px; text-anchor: middle; }
+.sky-zenith { fill: var(--fg-3); }
+
+.sky-sweep { transform-origin: 0 0; animation: sky-sweep 9s linear infinite; }
+.sky-sweep path { fill: var(--vor); opacity: 0.07; }
+@keyframes sky-sweep { to { transform: rotate(360deg); } }
+
+.sky-dot { stroke: rgba(12, 14, 20, 0.85); stroke-width: 0.6; transition: r 0.2s var(--ease); }
+.sky-dot.sel { stroke: var(--ink); stroke-width: 1; }
+.sky-halo { fill: none; stroke: var(--ink); stroke-width: 0.6; opacity: 0.5; }
+.sky-lbl { fill: var(--fg-2); font-family: var(--mono); font-size: 5.4px; dominant-baseline: middle; }
+.sky-lbl.sel { fill: var(--ink); }
+
+.sky-card {
+  position: absolute; font-family: var(--sans); font-weight: 600; font-size: 12px;
+  letter-spacing: 0.08em; color: var(--fg-3);
+}
+.sky-card.n { top: -2px; left: 50%; transform: translateX(-50%); color: var(--vor-2); }
+.sky-card.s { bottom: -2px; left: 50%; transform: translateX(-50%); }
+.sky-card.e { right: -3px; top: 50%; transform: translateY(-50%); }
+.sky-card.w { left: -3px; top: 50%; transform: translateY(-50%); }
+
+.sky-readout {
+  align-self: center; width: 100%; max-width: 460px;
+  font-family: var(--serif);
+}
+.sky-readout.hint {
+  text-align: center; font-style: italic; font-size: 13.5px; color: var(--fg-3);
+  padding: 10px 6px;
+}
+.sky-readout.glass { padding: 12px 14px; }
+.sky-readout-top { display: flex; align-items: baseline; gap: 9px; flex-wrap: wrap; }
+.sky-readout-name { font-family: var(--serif); font-weight: 600; font-size: 19px; color: var(--ink); }
+.sky-readout-type { font-family: var(--serif); font-style: italic; font-size: 14px; color: var(--fg-2); }
+.sky-readout-stats { display: flex; gap: 18px; margin-top: 10px; flex-wrap: wrap; }
+.sky-look-lbl { font-family: var(--sans); font-size: 9.5px; letter-spacing: 0.1em; text-transform: uppercase; color: var(--fg-4); }
+.sky-look-val { font-family: var(--sans); font-weight: 600; font-size: 14.5px; color: var(--fg-1); font-variant-numeric: tabular-nums; margin-top: 2px; }
