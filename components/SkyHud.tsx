@@ -97,7 +97,7 @@ export default function SkyHud({ open, onClose }: { open: boolean; onClose: () =
     <div className="sky-hud" role="dialog" aria-label="Sky compass">
       <div className="sky-head">
         <div className="sky-title">
-          <span className="panel-kicker">Sky compass</span>
+          <span className="sky-kicker">SKY COMPASS</span>
           <span className="sky-sub">{subtitle(permission, compassOn, facing)}</span>
         </div>
         <div className="sky-head-actions">
@@ -274,12 +274,10 @@ function Readout({
     const az = Math.round(contact.azimuthDeg);
     const el = Math.round(Math.max(0, contact.elevationDeg));
     return (
-      <div className="sky-readout glass no-strip">
+      <div className="sky-readout">
         <div className="sky-readout-top">
           {isAim && <span className="sky-aim-tag">⌖ aiming</span>}
-          <span className="t-class-chip" style={{ color: id.meta.color, borderColor: id.meta.color }}>
-            {id.meta.label}
-          </span>
+          <span className="t-class-chip">{id.meta.label}</span>
           <span className="sky-readout-name">{aircraftLabel(ac)}</span>
           <span className="sky-readout-type">{id.info ? id.name : ac.description || ac.typeCode || ""}</span>
         </div>

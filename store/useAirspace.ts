@@ -51,11 +51,13 @@ export interface AirspaceState {
   followSelected: boolean;
   overlays: Record<string, boolean>; // weather overlay id -> enabled
   basemap: string; // active basemap id (see lib/mapLayers BASEMAPS)
+  chartMode: "radar" | "sectional"; // central view: SVG scope vs. Leaflet map
   skyHeadingOffset: number; // manual Sky HUD compass fine-tune, degrees (persisted)
 
   // actions
   toggleOverlay: (id: string) => void;
   setBasemap: (id: string) => void;
+  setChartMode: (mode: "radar" | "sectional") => void;
   setHome: (lat: number, lon: number, opts?: { radiusNm?: number; label?: string }) => void;
   setRadius: (radiusNm: number) => void;
   setMapCenter: (lat: number, lon: number) => void;
@@ -95,12 +97,15 @@ export const useAirspace = create<AirspaceState>()(
       followSelected: false,
       overlays: { radar: false, satellite: false, airports: false },
       basemap: "dark",
+      chartMode: "radar",
       skyHeadingOffset: 0,
 
       toggleOverlay: (id) =>
         set((s) => ({ overlays: { ...s.overlays, [id]: !s.overlays[id] } })),
 
       setBasemap: (id) => set({ basemap: id }),
+
+      setChartMode: (mode) => set({ chartMode: mode }),
 
       setHome: (lat, lon, opts) =>
         set((s) => ({
@@ -175,6 +180,7 @@ export const useAirspace = create<AirspaceState>()(
         home: s.home,
         overlays: s.overlays,
         basemap: s.basemap,
+        chartMode: s.chartMode,
         skyHeadingOffset: s.skyHeadingOffset,
       }),
     }

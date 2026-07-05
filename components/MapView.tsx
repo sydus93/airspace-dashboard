@@ -31,7 +31,7 @@ function renderAirportLayer(Lm: typeof L, layer: L.LayerGroup, data: AirportLayo
         fillColor: "#8a8278", fillOpacity: 0.12, interactive: false,
       }).addTo(layer);
     } else if (f.kind === "taxiway") {
-      Lm.polyline(f.coords, { color: "#c89858", weight: 1.6, opacity: 0.55, interactive: false }).addTo(layer);
+      Lm.polyline(f.coords, { color: "#a29d91", weight: 1.6, opacity: 0.55, interactive: false }).addTo(layer);
     } else {
       const pl = Lm.polyline(f.coords, {
         color: "#f4ecd8", weight: 4, opacity: 0.9, lineCap: "butt", interactive: false,
@@ -99,16 +99,16 @@ export default function MapView() {
     for (const f of [0.34, 0.67, 1]) {
       Lm.circle([h.lat, h.lon], {
         radius: h.radiusNm * NM_TO_M * f,
-        color: "#8aae6e",
+        color: "#ece7d8",
         weight: f === 1 ? 1 : 0.8,
-        opacity: f === 1 ? 0.38 : 0.22,
+        opacity: f === 1 ? 0.22 : 0.12,
         dashArray: "3 5",
         fill: false,
         interactive: false,
       }).addTo(layer);
     }
     Lm.circleMarker([h.lat, h.lon], {
-      radius: 4, color: "#8aae6e", fillColor: "#8aae6e", fillOpacity: 0.9, weight: 1, interactive: false,
+      radius: 4, color: "#a8c890", fillColor: "#a8c890", fillOpacity: 0.9, weight: 1, interactive: false,
     }).addTo(layer);
     if (fit) {
       const b = ringBounds(h);
@@ -182,11 +182,11 @@ export default function MapView() {
           [route.origin.lat, route.origin.lon],
           [route.destination.lat, route.destination.lon],
         ],
-        { color: "#c98a68", weight: 1.5, opacity: 0.8, dashArray: "4 4", interactive: false }
+        { color: "#a8c890", weight: 1.5, opacity: 0.7, dashArray: "4 4", interactive: false }
       ).addTo(layer);
       for (const ap of [route.origin, route.destination]) {
         Lm.circleMarker([ap.lat, ap.lon], {
-          radius: 5, color: "#c98a68", weight: 1.5, fillColor: "#101218", fillOpacity: 1, interactive: false,
+          radius: 5, color: "#a8c890", weight: 1.5, fillColor: "#0e0f12", fillOpacity: 1, interactive: false,
         })
           .addTo(layer)
           .bindTooltip(ap.iata || ap.icao, { permanent: true, direction: "top", className: "ap-tip", offset: [0, -4] });
@@ -198,7 +198,7 @@ export default function MapView() {
           [ac.lat, ac.lon],
           [route.destination.lat, route.destination.lon],
         ],
-        { color: "#c98a68", weight: 1, opacity: 0.5, dashArray: "3 4", interactive: false }
+        { color: "#a8c890", weight: 1, opacity: 0.5, dashArray: "3 4", interactive: false }
       ).addTo(layer);
     }
   }
@@ -391,6 +391,15 @@ export default function MapView() {
     });
     return unsub;
   }, []);
+
+  // when the map is revealed (SECTIONAL mode), it may have been sized while the
+  // scope overlay covered it — nudge Leaflet to recompute its viewport.
+  const chartMode = useAirspace((s) => s.chartMode);
+  useEffect(() => {
+    if (chartMode !== "sectional") return;
+    const id = setTimeout(() => mapRef.current?.invalidateSize(), 60);
+    return () => clearTimeout(id);
+  }, [chartMode]);
 
   // follow selected
   const selectedHex = useAirspace((s) => s.selectedHex);

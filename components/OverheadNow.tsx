@@ -1,95 +1,57 @@
 "use client";
 
+import { useState } from "react";
 import { useAirspace } from "@/store/useAirspace";
-import {
-  aircraftLabel,
-  altitudeColor,
-  altitudeText,
-  bearingText,
-} from "@/lib/format";
+import { aircraftLabel, altitudeColor, altitudeText, bearingText, markerColor } from "@/lib/format";
 import type { Aircraft } from "@/lib/types";
 import { identify } from "@/lib/aircraftTypes";
-import PlaneGlyph from "@/components/PlaneGlyph";
 
-// "Overhead now" — the floating glass rail (top-right, desktop). Closest traffic
-// first: a featured nearest contact, then the next few by range. Reads straight
-// off the live frame; tapping a row selects it on the chart.
+// Overhead — nearest contacts, closest first. An index-numbered log that reads
+// like a strip listing; tap a row to select it on the scope/map.
 export default function OverheadNow() {
   const frame = useAirspace((s) => s.frame);
+  const selectedHex = useAirspace((s) => s.selectedHex);
   const select = useAirspace((s) => s.select);
+  const [expanded, setExpanded] = useState(true);
 
   const byRange = (frame?.aircraft ?? [])
     .filter((a) => a.distanceNm !== null)
     .sort((a, b) => (a.distanceNm ?? 1e9) - (b.distanceNm ?? 1e9));
 
-  const featured = byRange[0] ?? null;
-  const rows = byRange.slice(1, 4);
+  const rows = byRange.slice(0, expanded ? 4 : 1);
 
   return (
-    <aside className="overhead glass">
-      <div className="panel-eyebrow">
-        <span className="panel-kicker">Overhead now</span>
-        <span className="panel-aside">by range</span>
-      </div>
+    <section className="overhead">
+      <button className="oh-head" onClick={() => setExpanded((e) => !e)}>
+        <span className="oh-cap">OVERHEAD · NEAREST</span>
+        <span className={`oh-chev ${expanded ? "open" : ""}`}>▾</span>
+      </button>
 
-      {featured ? (
-        <button
-          className="overhead-featured"
-          onClick={() => select(featured.hex)}
-          style={{ display: "block", width: "100%", textAlign: "left", background: "none", border: "none", padding: 0, cursor: "pointer" }}
-        >
-          <div className="nearest">
-            Nearest{featured.distanceNm !== null ? ` · ${featured.distanceNm.toFixed(1)} nm` : ""}
-          </div>
-          <div className="row">
-            <span className="call">{aircraftLabel(featured)}</span>
-            <span className="alt" style={{ color: altitudeColor(featured) }}>
-              {altDisplay(featured)}
-            </span>
-          </div>
-          <div className="type">{typeLine(featured)}</div>
-        </button>
+      {rows.length === 0 ? (
+        <div className="oh-empty">No traffic in range right now.</div>
       ) : (
-        <div className="overhead-empty">No traffic in range right now.</div>
-      )}
-
-      {rows.map((ac) => (
-        <button
-          key={ac.hex}
-          className="contact-row"
-          onClick={() => select(ac.hex)}
-          style={{ width: "100%", background: "none", border: "none", borderBottom: "0.5px solid rgba(244,236,216,0.07)", cursor: "pointer" }}
-        >
-          <span className="contact-glyph">
-            <PlaneGlyph ac={ac} />
-          </span>
-          <span className="contact-mid">
-            <span className="contact-name">
-              {aircraftLabel(ac)}
-              {badge(ac)}
-            </span>
-            <span className="contact-sub">{typeLine(ac)}</span>
-          </span>
-          <span className="contact-end">
-            <span className="contact-alt" style={{ color: altitudeColor(ac) }}>
+        rows.map((ac, i) => (
+          <button
+            key={ac.hex}
+            className={`oh-row ${ac.hex === selectedHex ? "sel" : ""}`}
+            onClick={() => select(ac.hex)}
+          >
+            <span className="oh-idx">{String(i + 1).padStart(2, "0")}</span>
+            <span className="oh-dot" style={{ background: markerColor(ac) }} />
+            <span className="oh-call">{aircraftLabel(ac)}</span>
+            <span className="oh-type">{typeLine(ac)}</span>
+            {badge(ac)}
+            <span className="oh-alt" style={{ color: altitudeColor(ac) }}>
               {altitudeText(ac).replace(" ft", "")}
             </span>
-            <span className="contact-range">
-              {ac.distanceNm !== null ? `${ac.distanceNm.toFixed(0)} nm ${bearingText(ac.bearingDeg)}` : ""}
+            <span className="oh-rng">
+              {ac.distanceNm !== null ? `${ac.distanceNm.toFixed(0)}nm` : ""}
             </span>
-          </span>
-        </button>
-      ))}
-    </aside>
+          </button>
+        ))
+      )}
+    </section>
   );
-}
-
-function altDisplay(ac: Aircraft): string {
-  const base = altitudeText(ac).replace(" ft", "");
-  if (ac.onGround) return base;
-  if (ac.verticalRateFpm !== null && ac.verticalRateFpm > 100) return `${base} ↑`;
-  if (ac.verticalRateFpm !== null && ac.verticalRateFpm < -100) return `${base} ↓`;
-  return base;
 }
 
 function typeLine(ac: Aircraft): string {
@@ -99,12 +61,11 @@ function typeLine(ac: Aircraft): string {
     category: ac.category,
     isMilitary: ac.isMilitary,
   });
-  // Prefer the curated friendly name; fall back to the feed's raw description.
   return id.info ? id.name : ac.description || ac.typeCode || "Unknown type";
 }
 
 function badge(ac: Aircraft) {
-  if (ac.emergency === "lifeguard") return <span className="tag-badge med">MED</span>;
-  if (ac.isMilitary) return <span className="tag-badge mil">MIL</span>;
+  if (ac.emergency === "lifeguard") return <span className="oh-badge">MED</span>;
+  if (ac.isMilitary) return <span className="oh-badge">MIL</span>;
   return null;
 }

@@ -64,23 +64,32 @@ export function isEmergency(ac: Aircraft): boolean {
   return false;
 }
 
-// Hypsometric ramp ("The Chart"): low traffic reads warm-green like terrain,
-// high cruise goes cool turquoise like sky — the chart's own logic.
-export function altitudeColor(ac: Aircraft): string {
-  if (ac.onGround) return "#8aae6e";
+// "Airspace Mono" altitude bands — a bone-toned greyscale ramp: ground/low reads
+// dim, high cruise reads bright bone. The instrument's own logic (no hue, just
+// value), reserving the single sage-green accent for signal (notable) contacts.
+// Bands: 0 GND · 1 <8k · 2 8–15k · 3 15–25k · 4 FL250+.
+export const ALT_RAMP = ["#726e65", "#726e65", "#9a968a", "#c2bdae", "#ece7d8"];
+export const ALT_BAND_LABELS = ["GND", "< 8k", "8–15k", "15–25k", "FL250+"];
+export const ACCENT = "#a8c890"; // sage green — notable/active/priority
+export const INK_SEL = "#f4ecd8"; // selection ink
+
+export function altBand(ac: Aircraft): number {
+  if (ac.onGround) return 0;
   const a = ac.altBaroFt ?? 0;
-  if (a < 2000) return "#8aae6e"; // GND–2k  warm green
-  if (a < 8000) return "#a8c890"; // 2–8k    pale green
-  if (a < 15000) return "#c89858"; // 8–15k   amber
-  if (a < 25000) return "#c98a68"; // 15–25k  sienna
-  return "#5fb8c4"; //               > 25k    turquoise
+  if (a < 8000) return 1;
+  if (a < 15000) return 2;
+  if (a < 25000) return 3;
+  return 4;
+}
+
+export function altitudeColor(ac: Aircraft): string {
+  return ALT_RAMP[altBand(ac)];
 }
 
 // Final marker / glyph color, applying the signal overrides on top of altitude.
 export function markerColor(ac: Aircraft, selected = false): string {
-  if (selected) return "#f4ecd8"; // selected -> parchment ink
-  if (isEmergency(ac)) return "#db8e72"; // emergency -> terracotta (glow)
-  if (ac.isMilitary) return "#c98a68"; // military -> topo brown
+  if (selected) return INK_SEL; // selected -> bright ink
+  if (isNotable(ac)) return ACCENT; // military / emergency -> sage accent
   return altitudeColor(ac);
 }
 

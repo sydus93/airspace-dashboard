@@ -5,6 +5,9 @@ import { useAudio } from "@/store/useAudio";
 import { getAudioPlayer, type AudioPlayerState } from "@/components/audio/player";
 import type { AudioBackend } from "@/lib/types";
 
+// static-ish waveform bar heights (px), reused whether idle or live
+const WAVE = [4, 7, 5, 9, 6, 11, 8, 12, 7, 10, 6, 9, 5, 8];
+
 export default function AudioBar() {
   const channels = useAudio((s) => s.channels);
   const volume = useAudio((s) => s.volume);
@@ -13,16 +16,11 @@ export default function AudioBar() {
   const removeChannel = useAudio((s) => s.removeChannel);
   const resetToDefaults = useAudio((s) => s.resetToDefaults);
 
-  const [pstate, setPstate] = useState<AudioPlayerState>({
-    status: "idle",
-    channelId: null,
-    error: null,
-  });
+  const [pstate, setPstate] = useState<AudioPlayerState>({ status: "idle", channelId: null, error: null });
   const [editing, setEditing] = useState(false);
   const [adding, setAdding] = useState(false);
   const [expanded, setExpanded] = useState(false);
 
-  // subscribe to player state
   useEffect(() => {
     const player = getAudioPlayer();
     player.setVolume(volume);
@@ -48,39 +46,33 @@ export default function AudioBar() {
   };
 
   return (
-    <div className="audiobar glass">
+    <div className="audiobar">
       <div className="ab-main">
         <button
           className={`ab-power ${playing ? "on" : ""}`}
           onClick={() => (playing ? getAudioPlayer().stop() : setExpanded((e) => !e))}
-          aria-label={playing ? "stop" : "audio"}
           title={playing ? "Stop" : "ATC audio"}
         >
           {pstate.status === "loading" ? "…" : playing ? "■" : "▸"}
         </button>
 
-        <div className="ab-now" onClick={() => setExpanded((e) => !e)}>
+        <button className="ab-now" onClick={() => setExpanded((e) => !e)}>
           {current ? (
             <>
-              <span className={`ab-live ${pstate.status === "playing" ? "on" : ""}`} />
               <span className="ab-now-label">{current.label}</span>
-              {current.freqMhz && <span className="ab-freq">{current.freqMhz.toFixed(2)}</span>}
+              {current.freqMhz && <span className="ab-freq">{current.freqMhz.toFixed(2)} MHz</span>}
             </>
           ) : (
-            <span className="ab-now-idle">ATC audio — tap to choose a channel</span>
+            <span className="ab-now-idle">ATC — tap to choose a channel</span>
           )}
-        </div>
+        </button>
 
-        <input
-          className="ab-vol"
-          type="range"
-          min={0}
-          max={1}
-          step={0.02}
-          value={volume}
-          onChange={(e) => setVolume(Number(e.target.value))}
-          aria-label="volume"
-        />
+        <span className={`ab-wave ${playing ? "on" : ""}`} aria-hidden>
+          {WAVE.map((h, i) => (
+            <span key={i} style={{ height: `${h}px` }} />
+          ))}
+        </span>
+
         <button className="ab-expand" onClick={() => setExpanded((e) => !e)} aria-label="channels">
           {expanded ? "▾" : "▸"}
         </button>
@@ -88,36 +80,34 @@ export default function AudioBar() {
 
       {pstate.status === "error" && (
         <div className="ab-error">
-          Stream failed{current?.note ? ` — ${current.note}` : "."} Try another channel or add a
-          fresh URL from liveatc.net.
+          Stream failed{current?.note ? ` — ${current.note}` : "."} Try another channel or a fresh URL.
         </div>
       )}
 
       {expanded && (
         <div className="ab-tray">
-          <div className="ab-chips">
-            {channels.map((ch) => {
-              const active = ch.id === pstate.channelId && playing;
-              return (
-                <div key={ch.id} className={`ab-chip ${active ? "active" : ""}`}>
-                  <button className="ab-chip-btn" onClick={() => toggle(ch.id)}>
-                    {active && <span className="ab-live on" />}
-                    {ch.label}
-                  </button>
-                  {editing && (
-                    <button
-                      className="ab-chip-x"
-                      onClick={() => removeChannel(ch.id)}
-                      aria-label={`remove ${ch.label}`}
-                    >
-                      ✕
-                    </button>
-                  )}
-                </div>
-              );
-            })}
-            {channels.length === 0 && <span className="dim">No channels — add one below.</span>}
+          <div className="ab-tray-head">
+            <span className="ab-tray-title">STATIONS</span>
           </div>
+
+          {channels.map((ch) => {
+            const active = ch.id === pstate.channelId && playing;
+            return (
+              <div key={ch.id} className={`ab-chip ${active ? "active" : ""}`}>
+                <button className="ab-chip-btn" onClick={() => toggle(ch.id)}>
+                  {active && <span className="ab-chip-live" />}
+                  {ch.label}
+                  {ch.freqMhz ? ` · ${ch.freqMhz.toFixed(2)}` : ""}
+                </button>
+                {editing && (
+                  <button className="ab-chip-x" onClick={() => removeChannel(ch.id)} aria-label={`remove ${ch.label}`}>
+                    ✕
+                  </button>
+                )}
+              </div>
+            );
+          })}
+          {channels.length === 0 && <div className="ab-help">No channels — add one below.</div>}
 
           <div className="ab-actions">
             <button className="link-btn" onClick={() => setAdding((a) => !a)}>
@@ -140,10 +130,24 @@ export default function AudioBar() {
             />
           )}
 
+          <div className="ab-vol-row">
+            <span className="ab-vol-lbl">Vol</span>
+            <input
+              className="ab-vol"
+              type="range"
+              min={0}
+              max={1}
+              step={0.02}
+              value={volume}
+              onChange={(e) => setVolume(Number(e.target.value))}
+              aria-label="volume"
+            />
+            <span className="ab-vol-pct">{Math.round(volume * 100)}%</span>
+          </div>
+
           <p className="ab-help">
-            Streams are personal-use. Grab a URL from a feed page on liveatc.net (the
-            <code> .pls</code> link, or the stream address) and paste it above. LiveATC sits behind
-            Cloudflare — if a stream won&apos;t play directly, toggle <em>proxy</em> when adding it.
+            Streams are personal-use. Grab a URL from a feed page on liveatc.net (the <code>.pls</code>{" "}
+            link) and paste it above.
           </p>
         </div>
       )}
@@ -195,7 +199,9 @@ function AddStreamForm({
         <label className="ab-form-proxy">
           <input type="checkbox" checked={proxy} onChange={(e) => setProxy(e.target.checked)} /> proxy
         </label>
-        <button className="ab-form-add" onClick={submit}>Add</button>
+        <button className="ab-form-add" onClick={submit}>
+          Add
+        </button>
       </div>
     </div>
   );
