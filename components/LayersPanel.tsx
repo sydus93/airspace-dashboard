@@ -11,12 +11,20 @@ export default function LayersPanel({ open, onClose }: { open: boolean; onClose:
   const basemap = useAirspace((s) => s.basemap);
   const setBasemap = useAirspace((s) => s.setBasemap);
   const chartMode = useAirspace((s) => s.chartMode);
+  const theme = useAirspace((s) => s.theme);
+  const setTheme = useAirspace((s) => s.setTheme);
 
   if (!open) return null;
 
   const rows = [
     ...OVERLAYS.map((o) => ({ id: o.id, label: o.label })),
-    { id: "airports", label: "Airport detail" },
+    { id: "airfields", label: "Airfield symbols" },
+    { id: "airports", label: "Runway detail (z13+)" },
+  ];
+
+  const THEMES: { id: "night" | "day"; label: string }[] = [
+    { id: "night", label: "Night" },
+    { id: "day", label: "Day" },
   ];
 
   return (
@@ -31,6 +39,20 @@ export default function LayersPanel({ open, onClose }: { open: boolean; onClose:
           </button>
         </div>
         <div className="panel-body panel-pad">
+          <div className="lyr-section-lbl">Display</div>
+          <div className="lyr-seg" role="group" aria-label="theme">
+            {THEMES.map((t) => (
+              <button
+                key={t.id}
+                className={`lyr-seg-btn ${theme === t.id ? "on" : ""}`}
+                onClick={() => setTheme(t.id)}
+                aria-pressed={theme === t.id}
+              >
+                {t.label}
+              </button>
+            ))}
+          </div>
+
           <div className="lyr-section-lbl">
             Basemap{chartMode === "radar" ? " · shown in SECTIONAL" : ""}
           </div>

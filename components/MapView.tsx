@@ -20,6 +20,34 @@ const MAX_MARKERS = 200;
 // bbox too large), so we show a "zoom in" hint instead of fetching.
 const AIRPORT_MIN_Z = 13;
 
+// Zoom we jump to when you tap an airfield symbol — enough for runway detail.
+const AIRFIELD_TAP_Z = 14;
+// Labels would mat together at low zoom; show them once there's room.
+const AIRFIELD_LABEL_Z = 9;
+
+interface AirportMarker {
+  ident: string;
+  name: string;
+  lat: number;
+  lon: number;
+  rank: number;
+  iata: string | null;
+}
+
+// Sectional-style airfield symbol: a ring (filled for towered/large fields),
+// with the identifier alongside. Built as a divIcon so it inherits the theme's
+// CSS variables rather than baking a color in.
+function airfieldIcon(Lm: typeof L, ap: AirportMarker, showLabel: boolean): L.DivIcon {
+  const cls = `af af-r${ap.rank}`;
+  const label = showLabel ? `<span class="af-id">${ap.ident}</span>` : "";
+  return Lm.divIcon({
+    className: "af-divicon",
+    html: `<span class="${cls}"><span class="af-ring"></span>${label}</span>`,
+    iconSize: [10, 10],
+    iconAnchor: [5, 5],
+  });
+}
+
 function renderAirportLayer(Lm: typeof L, layer: L.LayerGroup, data: AirportLayout) {
   layer.clearLayers();
   const order = { apron: 0, taxiway: 1, runway: 2 };
@@ -27,14 +55,14 @@ function renderAirportLayer(Lm: typeof L, layer: L.LayerGroup, data: AirportLayo
   for (const f of feats) {
     if (f.kind === "apron") {
       Lm.polygon(f.coords, {
-        color: "#5a564f", weight: 0.6, opacity: 0.45,
-        fillColor: "#8a8278", fillOpacity: 0.12, interactive: false,
+        className: "v-apron", weight: 0.6, opacity: 0.45,
+        fillOpacity: 0.12, interactive: false,
       }).addTo(layer);
     } else if (f.kind === "taxiway") {
-      Lm.polyline(f.coords, { color: "#a29d91", weight: 1.6, opacity: 0.55, interactive: false }).addTo(layer);
+      Lm.polyline(f.coords, { className: "v-taxiway", weight: 1.6, opacity: 0.55, interactive: false }).addTo(layer);
     } else {
       const pl = Lm.polyline(f.coords, {
-        color: "#f4ecd8", weight: 4, opacity: 0.9, lineCap: "butt", interactive: false,
+        className: "v-runway", weight: 4, opacity: 0.9, lineCap: "butt", interactive: false,
       }).addTo(layer);
       if (f.ref) pl.bindTooltip(f.ref, { permanent: true, direction: "center", className: "rwy-label" });
     }
@@ -74,6 +102,8 @@ export default function MapView() {
   const baseIdRef = useRef<string>("");
   const airportLayerRef = useRef<L.LayerGroup | null>(null);
   const airportKeyRef = useRef<string>("");
+  const airfieldLayerRef = useRef<L.LayerGroup | null>(null);
+  const airfieldKeyRef = useRef<string>("");
   const LRef = useRef<typeof L | null>(null);
 
   const [tilesOk, setTilesOk] = useState(true);
@@ -99,7 +129,7 @@ export default function MapView() {
     for (const f of [0.34, 0.67, 1]) {
       Lm.circle([h.lat, h.lon], {
         radius: h.radiusNm * NM_TO_M * f,
-        color: "#ece7d8",
+        className: "v-ring",
         weight: f === 1 ? 1 : 0.8,
         opacity: f === 1 ? 0.22 : 0.12,
         dashArray: "3 5",
@@ -108,7 +138,7 @@ export default function MapView() {
       }).addTo(layer);
     }
     Lm.circleMarker([h.lat, h.lon], {
-      radius: 4, color: "#a8c890", fillColor: "#a8c890", fillOpacity: 0.9, weight: 1, interactive: false,
+      radius: 4, className: "v-home", fillOpacity: 0.9, weight: 1, interactive: false,
     }).addTo(layer);
     if (fit) {
       const b = ringBounds(h);
@@ -182,11 +212,11 @@ export default function MapView() {
           [route.origin.lat, route.origin.lon],
           [route.destination.lat, route.destination.lon],
         ],
-        { color: "#a8c890", weight: 1.5, opacity: 0.7, dashArray: "4 4", interactive: false }
+        { className: "v-route", weight: 1.5, opacity: 0.7, dashArray: "4 4", interactive: false }
       ).addTo(layer);
       for (const ap of [route.origin, route.destination]) {
         Lm.circleMarker([ap.lat, ap.lon], {
-          radius: 5, color: "#a8c890", weight: 1.5, fillColor: "#0e0f12", fillOpacity: 1, interactive: false,
+          radius: 5, className: "v-apt", weight: 1.5, fillOpacity: 1, interactive: false,
         })
           .addTo(layer)
           .bindTooltip(ap.iata || ap.icao, { permanent: true, direction: "top", className: "ap-tip", offset: [0, -4] });
@@ -198,7 +228,7 @@ export default function MapView() {
           [ac.lat, ac.lon],
           [route.destination.lat, route.destination.lon],
         ],
-        { color: "#a8c890", weight: 1, opacity: 0.5, dashArray: "3 4", interactive: false }
+        { className: "v-route-leg", weight: 1, opacity: 0.5, dashArray: "3 4", interactive: false }
       ).addTo(layer);
     }
   }
@@ -275,6 +305,59 @@ export default function MapView() {
     }
   }
 
+  // Airfield symbols: the "what is there to look at?" layer. Answers the problem
+  // that runway detail only appears at z13+, with no clue where to zoom.
+  async function syncAirfields() {
+    const Lm = LRef.current;
+    const map = mapRef.current;
+    const layer = airfieldLayerRef.current;
+    if (!Lm || !map || !layer || !readyRef.current) return;
+    const on = useAirspace.getState().overlays.airfields;
+    if (!on) {
+      if (airfieldKeyRef.current) {
+        layer.clearLayers();
+        airfieldKeyRef.current = "";
+      }
+      return;
+    }
+    const z = Math.round(map.getZoom());
+    const b = map.getBounds().pad(0.15);
+    const bbox: [number, number, number, number] = [b.getSouth(), b.getWest(), b.getNorth(), b.getEast()];
+    // Re-fetch only when the view meaningfully changed, not on every pan pixel.
+    const key = `${z}|${bbox.map((x) => x.toFixed(1)).join(",")}`;
+    if (key === airfieldKeyRef.current) return;
+    airfieldKeyRef.current = key;
+    try {
+      const res = await fetch(`/api/airports?bbox=${bbox.join(",")}&z=${z}`);
+      const env = (await res.json()) as { data: { airports: AirportMarker[] } };
+      if (!useAirspace.getState().overlays.airfields || airfieldKeyRef.current !== key) return;
+      layer.clearLayers();
+      const showLabel = z >= AIRFIELD_LABEL_Z;
+      for (const ap of env.data.airports) {
+        Lm.marker([ap.lat, ap.lon], {
+          icon: airfieldIcon(Lm, ap, showLabel || ap.rank === 0),
+          keyboard: false,
+          zIndexOffset: -500, // never cover a contact
+        })
+          .addTo(layer)
+          .bindTooltip(ap.iata ? `${ap.ident} · ${ap.name} (${ap.iata})` : `${ap.ident} · ${ap.name}`, {
+            direction: "top",
+            className: "ap-tip",
+            offset: [0, -6],
+          })
+          // tapping a field is the shortcut into the runway/taxiway view
+          .on("click", (e: L.LeafletMouseEvent) => {
+            e.originalEvent?.stopPropagation();
+            const st = useAirspace.getState();
+            if (!st.overlays.airports) st.toggleOverlay("airports");
+            map.flyTo([ap.lat, ap.lon], Math.max(map.getZoom(), AIRFIELD_TAP_Z), { duration: 0.7 });
+          });
+      }
+    } catch {
+      airfieldKeyRef.current = ""; // allow a retry on the next move
+    }
+  }
+
   async function syncAirports() {
     const Lm = LRef.current;
     const map = mapRef.current;
@@ -338,6 +421,7 @@ export default function MapView() {
       Lm.control.zoom({ position: "bottomright" }).addTo(map);
 
       homeLayerRef.current = Lm.layerGroup().addTo(map);
+      airfieldLayerRef.current = Lm.layerGroup().addTo(map);
       airportLayerRef.current = Lm.layerGroup().addTo(map);
       routeLayerRef.current = Lm.layerGroup().addTo(map);
       acLayerRef.current = Lm.layerGroup().addTo(map);
@@ -347,6 +431,7 @@ export default function MapView() {
         const c = map.getCenter();
         useAirspace.getState().setMapCenter(c.lat, c.lng);
         syncAirports();
+        syncAirfields();
       });
 
       readyRef.current = true;
@@ -355,6 +440,7 @@ export default function MapView() {
       pushRoute();
       syncOverlays();
       syncAirports();
+      syncAirfields();
       // Leaflet sometimes needs a nudge if the container sized after init
       setTimeout(() => map.invalidateSize(), 200);
     })();
@@ -370,6 +456,7 @@ export default function MapView() {
       baseRef.current = null;
       baseIdRef.current = "";
       airportKeyRef.current = "";
+      airfieldKeyRef.current = "";
       readyRef.current = false;
       mapRef.current?.remove();
       mapRef.current = null;
@@ -384,6 +471,7 @@ export default function MapView() {
       pushRoute();
       syncOverlays();
       syncAirports();
+      syncAirfields();
       if (state.home !== lastHomeRef.current) {
         lastHomeRef.current = state.home;
         pushHome(true);

@@ -64,14 +64,26 @@ export function isEmergency(ac: Aircraft): boolean {
   return false;
 }
 
-// "Airspace Mono" altitude bands — a bone-toned greyscale ramp: ground/low reads
-// dim, high cruise reads bright bone. The instrument's own logic (no hue, just
-// value), reserving the single sage-green accent for signal (notable) contacts.
+// "Airspace Mono" altitude bands — a value ramp: ground/low reads dim, high
+// cruise reads full-strength ink. The instrument's own logic (no hue, just
+// value), reserving the single sage accent for signal (notable) contacts.
 // Bands: 0 GND · 1 <8k · 2 8–15k · 3 15–25k · 4 FL250+.
-export const ALT_RAMP = ["#726e65", "#726e65", "#9a968a", "#c2bdae", "#ece7d8"];
+//
+// These are CSS custom-property references, not literals, because every consumer
+// applies them as a CSS value (inline style / SVG fill / Leaflet element style).
+// That means the night↔day theme swap is a pure CSS token change — no React
+// re-render, no theme argument threaded through the render tree. Token values
+// live in globals.css under :root and :root[data-theme="day"].
+export const ALT_RAMP = [
+  "var(--alt-0)",
+  "var(--alt-1)",
+  "var(--alt-2)",
+  "var(--alt-3)",
+  "var(--alt-4)",
+];
 export const ALT_BAND_LABELS = ["GND", "< 8k", "8–15k", "15–25k", "FL250+"];
-export const ACCENT = "#a8c890"; // sage green — notable/active/priority
-export const INK_SEL = "#f4ecd8"; // selection ink
+export const ACCENT = "var(--accent)"; // sage — notable/active/priority
+export const INK_SEL = "var(--ink-bright)"; // selection ink
 
 export function altBand(ac: Aircraft): number {
   if (ac.onGround) return 0;

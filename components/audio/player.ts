@@ -22,11 +22,23 @@ export interface AudioPlayer {
   getState(): AudioPlayerState;
 }
 
+// A .pls / .m3u is a playlist, not audio — <audio> can't decode it, and the
+// browser can't unwrap it either (cross-origin fetch is CORS-blocked). It has to
+// go through the proxy, which resolves it to the real stream server-side.
+export function isPlaylistUrl(url: string): boolean {
+  try {
+    return /\.(pls|m3u)$/i.test(new URL(url, "http://x.invalid").pathname);
+  } catch {
+    return false;
+  }
+}
+
 // Decide whether a channel must route through the same-origin proxy.
 export function resolveAudioUrl(channel: AudioChannel): string {
   const proxied = () => `/api/audio?src=${encodeURIComponent(channel.url)}`;
+  if (channel.proxy === false && !isPlaylistUrl(channel.url)) return channel.url;
   if (channel.proxy === true) return proxied();
-  if (channel.proxy === false) return channel.url;
+  if (isPlaylistUrl(channel.url)) return proxied();
   // defaults: local Icecast and http-on-https must be proxied (mixed content)
   if (channel.backend === "local-icecast") return proxied();
   if (typeof window !== "undefined") {
@@ -42,6 +54,7 @@ class Html5AudioPlayer implements AudioPlayer {
   private state: AudioPlayerState = { status: "idle", channelId: null, error: null };
   private listeners = new Set<(s: AudioPlayerState) => void>();
   private volume = 0.9;
+  private lastUrl: string | null = null;
 
   private ensureEl(): HTMLAudioElement {
     if (!this.el) {
@@ -52,18 +65,44 @@ class Html5AudioPlayer implements AudioPlayer {
         this.set({ status: "playing", error: null })
       );
       el.addEventListener("waiting", () => this.set({ status: "loading" }));
-      el.addEventListener("error", () =>
-        this.set({ status: "error", error: "stream unavailable" })
-      );
+      el.addEventListener("error", () => {
+        this.set({ status: "error", error: "stream unavailable" });
+        // <audio>'s error event carries no useful detail. When we're going
+        // through our own proxy, ask it why — it knows (retired feed slug,
+        // upstream 403, HTML challenge page) and says so in the body.
+        void this.explainFailure();
+      });
       el.addEventListener("stalled", () => this.set({ status: "loading" }));
       this.el = el;
     }
     return this.el;
   }
 
+  // Probe the proxy for a human-readable reason, then abort before we pull any
+  // of the stream body.
+  private async explainFailure(): Promise<void> {
+    const url = this.lastUrl;
+    if (!url || !url.startsWith("/api/audio")) return;
+    const ctrl = new AbortController();
+    try {
+      const res = await fetch(url, { signal: ctrl.signal, cache: "no-store" });
+      if (!res.ok) {
+        const text = (await res.text()).slice(0, 160);
+        if (this.state.status === "error") {
+          this.set({ error: text || `upstream ${res.status}` });
+        }
+      }
+    } catch {
+      /* probe is best-effort */
+    } finally {
+      ctrl.abort();
+    }
+  }
+
   async play(channel: AudioChannel): Promise<void> {
     const el = this.ensureEl();
     const url = resolveAudioUrl(channel);
+    this.lastUrl = url;
     this.set({ status: "loading", channelId: channel.id, error: null });
     // cache-bust so re-selecting a previously-failed live stream reconnects
     el.src = `${url}${url.includes("?") ? "&" : "?"}_t=${Date.now()}`;

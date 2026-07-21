@@ -42,14 +42,26 @@ export const config: AppConfig = {
   },
   weatherStations: ["KALB", "KMSV", "KPOU", "KGFL", "KSWF", "KPSF"],
   audioChannels: [
-    // backend "remote-stream" = LiveATC/other, personal use only. LiveATC sits
-    // behind Cloudflare; the .pls playlist links from a feed page are the most
-    // reliable thing to paste (the bare stream host rotates and often 403s). If
-    // a seed won't play, open the feed on liveatc.net and use "+ Add stream".
+    // backend "remote-stream" = LiveATC/other, personal use only. These are .pls
+    // playlist links from the feed page; /api/audio resolves the playlist to the
+    // real stream server-side (a browser <audio> element can't parse a .pls).
+    //
+    // Feed slugs go stale — LiveATC answers an unknown slug with its homepage
+    // rather than a 404, which used to fail silently. The proxy now reports
+    // "feed not found" for that case. Re-check a dead one at
+    // liveatc.net/search/?icao=XXXX (the mount names are in the page's player
+    // links, e.g. kalb2_twr — note the digit, they are easy to mistype).
     {
       id: "kalb-twr",
       label: "KALB Tower",
-      url: "https://www.liveatc.net/play/kalb_twr.pls",
+      url: "https://www.liveatc.net/play/kalb2_twr.pls",
+      backend: "remote-stream",
+      note: "If silent, grab the current .pls from liveatc.net/search/?icao=kalb",
+    },
+    {
+      id: "kalb-gnd",
+      label: "KALB Ground",
+      url: "https://www.liveatc.net/play/kalb2_gnd.pls",
       backend: "remote-stream",
       note: "If silent, grab the current .pls from liveatc.net/search/?icao=kalb",
     },
@@ -61,11 +73,11 @@ export const config: AppConfig = {
       note: "If silent, grab the current .pls from liveatc.net/search/?icao=kalb",
     },
     {
-      id: "kpou",
-      label: "KPOU (Hudson Valley)",
-      url: "https://www.liveatc.net/play/kpou.pls",
+      id: "kfnl-gnd-twr",
+      label: "KFNL Ground/Tower",
+      url: "https://www.liveatc.net/play/kfnl3_gnd_twr.pls",
       backend: "remote-stream",
-      note: "If silent, grab the current .pls from liveatc.net/search/?icao=kpou",
+      note: "Northern Colorado Regional. If silent, re-check liveatc.net/search/?icao=kfnl",
     },
     // Example local feed (own RTLSDR-Airband over Tailscale). Disabled by
     // default — set your Icecast mount URL and flip into the list. http over an

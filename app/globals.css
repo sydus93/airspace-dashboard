@@ -9,6 +9,12 @@
 @import url("https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@300;400;500;600&family=IBM+Plex+Mono:wght@300;400;500&display=swap");
 
 :root {
+  /* Ink/accent as bare RGB components so any rule can say rgba(var(--ink-rgb), a)
+     and follow the theme. Every hairline, hatch, sweep and scope ring below is
+     "ink at some alpha" — this is what makes the day swap total. */
+  --ink-rgb: 233, 228, 214;
+  --accent-rgb: 168, 200, 144;
+
   --sans: "IBM Plex Sans", "Inter", -apple-system, system-ui, sans-serif;
   --mono: "IBM Plex Mono", "JetBrains Mono", ui-monospace, Consolas, monospace;
 
@@ -28,19 +34,109 @@
 
   /* The one accent */
   --accent: #a8c890;
-  --accent-dim: rgba(168, 200, 144, 0.5);
-  --accent-wash: rgba(168, 200, 144, 0.08);
+  --accent-dim: rgba(var(--accent-rgb), 0.5);
+  --accent-wash: rgba(var(--accent-rgb), 0.08);
 
   /* Rules — bone hairlines at graded opacity */
-  --rule: rgba(233, 228, 214, 0.1);
-  --rule-2: rgba(233, 228, 214, 0.14);
-  --rule-3: rgba(233, 228, 214, 0.2);
-  --rule-faint: rgba(233, 228, 214, 0.06);
+  --rule: rgba(var(--ink-rgb), 0.1);
+  --rule-2: rgba(var(--ink-rgb), 0.14);
+  --rule-3: rgba(var(--ink-rgb), 0.2);
+  --rule-faint: rgba(var(--ink-rgb), 0.06);
 
-  --hatch: repeating-linear-gradient(-45deg, rgba(233, 228, 214, 0.42) 0 5px, transparent 5px 12px);
-  --hatch-fill: repeating-linear-gradient(45deg, rgba(233, 228, 214, 0.05) 0 3px, transparent 3px 6px);
+  --hatch: repeating-linear-gradient(-45deg, rgba(var(--ink-rgb), 0.42) 0 5px, transparent 5px 12px);
+  --hatch-fill: repeating-linear-gradient(45deg, rgba(var(--ink-rgb), 0.05) 0 3px, transparent 3px 6px);
+
+  /* Altitude ramp as tokens — lib/format.ts hands these out as var() refs, so
+     the whole app (map markers, scope blips, histogram, legend, sky dome)
+     re-colors on a theme swap with no JS involved. */
+  --alt-0: #726e65;
+  --alt-1: #726e65;
+  --alt-2: #9a968a;
+  --alt-3: #c2bdae;
+  --alt-4: #ece7d8;
+
+  /* map vectors */
+  --v-ring: #ece7d8;
+  --v-runway: #f4ecd8;
+  --v-taxiway: #a29d91;
+  --v-apron: #8a8278;
+  --v-apron-line: #5a564f;
+  --v-apt-fill: #0e0f12;
+
+  --grid-dot: rgba(var(--ink-rgb), 0.03);
+  --grain-blend: screen;
+  --grain-opacity: 0.045;
+  --body-bg: #08090a;
+  --scrim: rgba(6, 7, 9, 0.5);
+  --shadow-sheet: 0 14px 44px rgba(0, 0, 0, 0.65);
+
+  /* Text knocked out of an accent/ink fill (chips, active segments, pills). */
+  --knockout: #0b0c0e;
+  /* Controls floating over the map — must stay legible on either basemap. */
+  --float-bg: rgba(11, 12, 14, 0.8);
+  --float-bg-strong: rgba(11, 12, 14, 0.85);
 
   --ease: cubic-bezier(0.25, 0.1, 0.25, 1);
+}
+
+/* ============================================================
+   DAY MODE — "Foolscap"
+   The same instrument printed on paper instead of lit on glass:
+   dark ink on warm stock, the hatch and rules become press marks.
+   Only tokens change; no layout or component branches on theme.
+   ============================================================ */
+:root[data-theme="day"] {
+  --ink-rgb: 27, 29, 31;
+  --accent-rgb: 78, 122, 51;
+
+  --bg: #e6dfcb;
+  --bg-scope: #ece5d3;
+  --bg-panel: #f1ebda;
+  --bg-sheet: #f4eede;
+
+  --ink: #1b1d1f;
+  --ink-bright: #000000;
+  --fg-1: #33363a;
+  --fg-2: #55595e;
+  --fg-3: #7c8085;
+  --fg-4: #9a9ea3;
+
+  --accent: #4e7a33;
+  --accent-dim: rgba(78, 122, 51, 0.55);
+  --accent-wash: rgba(78, 122, 51, 0.1);
+
+  --rule: rgba(27, 29, 31, 0.16);
+  --rule-2: rgba(27, 29, 31, 0.22);
+  --rule-3: rgba(27, 29, 31, 0.3);
+  --rule-faint: rgba(27, 29, 31, 0.09);
+
+  --hatch: repeating-linear-gradient(-45deg, rgba(27, 29, 31, 0.4) 0 5px, transparent 5px 12px);
+  --hatch-fill: repeating-linear-gradient(45deg, rgba(27, 29, 31, 0.06) 0 3px, transparent 3px 6px);
+
+  /* Ramp inverts: low/ground is faint on paper, high cruise is full ink. */
+  --alt-0: #9a9ea3;
+  --alt-1: #9a9ea3;
+  --alt-2: #6a6e73;
+  --alt-3: #3d4044;
+  --alt-4: #16181a;
+
+  --v-ring: #4a4d51;
+  --v-runway: #1b1d1f;
+  --v-taxiway: #6a6e73;
+  --v-apron: #8a8278;
+  --v-apron-line: #6a6e73;
+  --v-apt-fill: #f4eede;
+
+  --grid-dot: rgba(27, 29, 31, 0.05);
+  --grain-blend: multiply;
+  --grain-opacity: 0.03;
+  --body-bg: #ded7c2;
+  --scrim: rgba(60, 56, 44, 0.32);
+  --shadow-sheet: 0 14px 40px rgba(60, 56, 44, 0.28);
+
+  --knockout: #f4eede;
+  --float-bg: rgba(244, 238, 222, 0.88);
+  --float-bg-strong: rgba(244, 238, 222, 0.93);
 }
 
 * {
@@ -51,7 +147,7 @@ html,
 body {
   margin: 0;
   padding: 0;
-  background: #08090a;
+  background: var(--body-bg);
   height: 100%;
   overscroll-behavior: none;
 }
@@ -95,7 +191,7 @@ button {
   display: flex;
   flex-direction: column;
   background: var(--bg);
-  background-image: radial-gradient(rgba(233, 228, 214, 0.03) 0.5px, transparent 0.5px);
+  background-image: radial-gradient(var(--grid-dot) 0.5px, transparent 0.5px);
   background-size: 16px 16px;
   color: var(--ink);
   overflow: hidden;
@@ -107,8 +203,8 @@ button {
   inset: 0;
   pointer-events: none;
   z-index: 40;
-  opacity: 0.045;
-  mix-blend-mode: screen;
+  opacity: var(--grain-opacity);
+  mix-blend-mode: var(--grain-blend);
   background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='120' height='120'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
 }
 
@@ -142,6 +238,7 @@ button {
   cursor: pointer;
 }
 .ts-mark {
+  color: var(--ink);
   opacity: 0.8;
   flex-shrink: 0;
 }
@@ -245,7 +342,7 @@ button {
   font-family: var(--mono);
   font-size: 9px;
   letter-spacing: 0.06em;
-  color: #0b0c0e;
+  color: var(--knockout);
   background: var(--accent);
   padding: 2px 6px;
   white-space: nowrap;
@@ -281,7 +378,7 @@ button {
 .map-root {
   position: absolute;
   inset: 0;
-  background: #0b0c0e;
+  background: var(--bg-scope);
 }
 
 /* RADAR scope — opaque overlay above the map */
@@ -290,7 +387,7 @@ button {
   inset: 0;
   z-index: 8;
   background: var(--bg-scope);
-  background-image: radial-gradient(rgba(233, 228, 214, 0.04) 0.6px, transparent 0.6px);
+  background-image: radial-gradient(rgba(var(--ink-rgb), 0.04) 0.6px, transparent 0.6px);
   background-size: 13px 13px;
   display: flex;
   align-items: center;
@@ -305,17 +402,17 @@ button {
 
 .scope-ring {
   fill: none;
-  stroke: rgba(233, 228, 214, 0.09);
+  stroke: rgba(var(--ink-rgb), 0.09);
   stroke-width: 0.5;
 }
 .scope-ring.rim {
-  stroke: rgba(233, 228, 214, 0.16);
+  stroke: rgba(var(--ink-rgb), 0.16);
 }
 .scope-ring.ticks {
-  stroke: rgba(233, 228, 214, 0.28);
+  stroke: rgba(var(--ink-rgb), 0.28);
 }
 .scope-spoke {
-  stroke: rgba(233, 228, 214, 0.07);
+  stroke: rgba(var(--ink-rgb), 0.07);
   stroke-width: 0.5;
 }
 .scope-sweep {
@@ -323,16 +420,16 @@ button {
   animation: ms_sweep 10s linear infinite;
 }
 .scope-sweep line {
-  stroke: rgba(233, 228, 214, 0.2);
+  stroke: rgba(var(--ink-rgb), 0.2);
   stroke-width: 0.8;
 }
 .scope-center {
   fill: none;
-  stroke: rgba(244, 236, 216, 0.7);
+  stroke: rgba(var(--ink-rgb), 0.7);
   stroke-width: 1;
 }
 .scope-ring-lbl {
-  fill: rgba(233, 228, 214, 0.4);
+  fill: rgba(var(--ink-rgb), 0.4);
   font-family: var(--mono);
   font-size: 5px;
 }
@@ -358,7 +455,7 @@ button {
 .scope-lbl {
   font-family: var(--mono);
   font-size: 5px;
-  fill: rgba(233, 228, 214, 0.7);
+  fill: rgba(var(--ink-rgb), 0.7);
 }
 .scope-lbl.sel {
   fill: var(--ink-bright);
@@ -385,10 +482,10 @@ button {
 .chart-seg {
   position: absolute;
   top: 8px;
-  left: 8px;
+  left: calc(env(safe-area-inset-left, 0px) + 8px);
   display: flex;
   border: 0.5px solid var(--rule-2);
-  background: rgba(11, 12, 14, 0.78);
+  background: var(--float-bg);
   backdrop-filter: blur(2px);
 }
 .chart-seg-btn {
@@ -403,13 +500,13 @@ button {
 }
 .chart-seg-btn.on {
   background: var(--accent);
-  color: #0b0c0e;
+  color: var(--knockout);
 }
 
 .stage-status {
   position: absolute;
   top: 52px;
-  left: 8px;
+  left: calc(env(safe-area-inset-left, 0px) + 8px);
   display: flex;
   flex-direction: column;
   gap: 9px;
@@ -438,7 +535,11 @@ button {
 .alt-legend {
   position: absolute;
   bottom: 8px;
-  left: 8px;
+  left: calc(env(safe-area-inset-left, 0px) + 8px);
+  /* backed so the swatches stay readable over a light/sectional basemap */
+  background: var(--float-bg);
+  border: 0.5px solid var(--rule-2);
+  padding: 6px 8px;
   pointer-events: none;
 }
 .lg-title {
@@ -472,7 +573,7 @@ button {
 .control-rail {
   position: absolute;
   top: 8px;
-  right: 8px;
+  right: calc(env(safe-area-inset-right, 0px) + 8px);
   display: flex;
   flex-direction: column;
   gap: 7px;
@@ -486,7 +587,7 @@ button {
   justify-content: center;
   cursor: pointer;
   font-family: var(--mono);
-  background: rgba(11, 12, 14, 0.8);
+  background: var(--float-bg);
   border: 1px solid var(--rule-2);
   color: var(--fg-2);
   backdrop-filter: blur(2px);
@@ -516,7 +617,7 @@ button {
   font-size: 9px;
   letter-spacing: 0.02em;
   color: var(--fg-3);
-  background: rgba(11, 12, 14, 0.8);
+  background: var(--float-bg);
   border: 0.5px solid var(--rule-2);
   padding: 4px 8px;
   white-space: nowrap;
@@ -525,11 +626,11 @@ button {
   display: none;
 }
 .leaflet-container {
-  background: #0b0c0e;
+  background: var(--bg-scope);
   font-family: var(--mono);
 }
 .leaflet-control-attribution {
-  background: rgba(11, 12, 14, 0.7) !important;
+  background: var(--float-bg) !important;
   color: var(--fg-4) !important;
   font-family: var(--mono);
   font-size: 8px !important;
@@ -538,7 +639,7 @@ button {
   color: var(--fg-3) !important;
 }
 .leaflet-bar a {
-  background: rgba(11, 12, 14, 0.85) !important;
+  background: var(--float-bg-strong) !important;
   color: var(--fg-2) !important;
   border-color: var(--rule-2) !important;
 }
@@ -555,10 +656,10 @@ button {
   display: block;
 }
 .ac-divicon.selected .ac-plane {
-  filter: drop-shadow(0 0 3px rgba(244, 236, 216, 0.5));
+  filter: drop-shadow(0 0 3px rgba(var(--ink-rgb), 0.5));
 }
 .ac-divicon.emergency .ac-plane {
-  filter: drop-shadow(0 0 4px rgba(168, 200, 144, 0.7));
+  filter: drop-shadow(0 0 4px rgba(var(--accent-rgb), 0.7));
 }
 .ac-tag {
   position: absolute;
@@ -566,7 +667,7 @@ button {
   top: -1px;
   font-family: var(--mono);
   font-size: 8px;
-  color: rgba(233, 228, 214, 0.7);
+  color: var(--fg-1);
   white-space: nowrap;
   pointer-events: none;
 }
@@ -579,7 +680,7 @@ button {
   font-size: 8px;
 }
 .ap-tip {
-  background: rgba(11, 12, 14, 0.85) !important;
+  background: var(--float-bg-strong) !important;
   border: 0.5px solid var(--rule-2) !important;
   color: var(--fg-1) !important;
   font-family: var(--mono);
@@ -743,7 +844,7 @@ button {
   font-family: var(--mono);
   font-size: 7px;
   letter-spacing: 0.06em;
-  color: #0b0c0e;
+  color: var(--knockout);
   background: var(--accent);
   padding: 1px 3px;
   flex-shrink: 0;
@@ -799,7 +900,7 @@ button {
 .ab-power.on {
   background: var(--accent);
   border-color: var(--accent);
-  color: #0b0c0e;
+  color: var(--knockout);
 }
 .ab-now {
   flex: 1;
@@ -981,7 +1082,7 @@ button {
 }
 .ab-form input,
 .ab-form select {
-  background: #0b0c0e;
+  background: var(--bg-scope);
   border: 0.5px solid var(--rule-3);
   color: var(--ink);
   font-family: var(--mono);
@@ -1008,7 +1109,7 @@ button {
 .ab-form-add {
   background: var(--accent);
   border: none;
-  color: #0b0c0e;
+  color: var(--knockout);
   font-family: var(--mono);
   font-size: 11px;
   padding: 6px 12px;
@@ -1021,21 +1122,21 @@ button {
 
 .target {
   position: absolute;
-  left: 8px;
-  right: 8px;
+  left: calc(env(safe-area-inset-left, 0px) + 8px);
+  right: calc(env(safe-area-inset-right, 0px) + 8px);
   bottom: calc(env(safe-area-inset-bottom, 0px) + 10px);
   z-index: 22;
   background: var(--bg-sheet);
   border: 1px solid var(--rule-3);
-  box-shadow: 0 -6px 40px rgba(0, 0, 0, 0.7);
+  box-shadow: var(--shadow-sheet);
   animation: ms_sheet 0.24s var(--ease);
 }
 .t-hazard {
   height: 6px;
-  background: repeating-linear-gradient(-45deg, rgba(233, 228, 214, 0.3) 0 5px, transparent 5px 12px);
+  background: repeating-linear-gradient(-45deg, rgba(var(--ink-rgb), 0.3) 0 5px, transparent 5px 12px);
 }
 .t-hazard.notable {
-  background: repeating-linear-gradient(-45deg, rgba(168, 200, 144, 0.7) 0 5px, transparent 5px 12px);
+  background: repeating-linear-gradient(-45deg, rgba(var(--accent-rgb), 0.7) 0 5px, transparent 5px 12px);
 }
 .t-body {
   padding: 11px 12px 13px;
@@ -1109,7 +1210,7 @@ button {
 }
 .pill.on {
   background: var(--accent);
-  color: #0b0c0e;
+  color: var(--knockout);
   border-color: var(--accent);
 }
 .tag-badge {
@@ -1135,7 +1236,7 @@ button {
   font-family: var(--mono);
   font-size: 10px;
   letter-spacing: 0.06em;
-  color: #0b0c0e;
+  color: var(--knockout);
   background: var(--accent);
   padding: 3px 8px;
 }
@@ -1329,27 +1430,31 @@ button {
   position: absolute;
   inset: 0;
   z-index: 27;
-  background: rgba(6, 7, 9, 0.5);
+  background: var(--scrim);
   animation: ms_fade 0.2s;
 }
 .panel {
   position: absolute;
-  left: 8px;
-  right: 8px;
+  /* respect the notch/Dynamic Island and the rounded display corners, or a
+     top-anchored sheet slides up under the status bar on a phone */
+  left: calc(env(safe-area-inset-left, 0px) + 8px);
+  right: calc(env(safe-area-inset-right, 0px) + 8px);
   z-index: 28;
   background: var(--bg-sheet);
   border: 1px solid var(--rule-3);
-  box-shadow: 0 14px 44px rgba(0, 0, 0, 0.65);
+  box-shadow: var(--shadow-sheet);
   animation: ms_sheet 0.24s var(--ease);
   display: flex;
   flex-direction: column;
-  max-height: calc(100% - 24px);
+  max-height: calc(
+    100% - env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 0px) - 24px
+  );
 }
 .panel.top {
-  top: 12px;
+  top: calc(env(safe-area-inset-top, 0px) + 12px);
 }
 .panel.wx {
-  top: 12px;
+  top: calc(env(safe-area-inset-top, 0px) + 12px);
   bottom: calc(env(safe-area-inset-bottom, 0px) + 10px);
 }
 .panel.bottom {
@@ -1500,7 +1605,7 @@ button {
 }
 .lyr-seg-btn.on {
   background: var(--accent);
-  color: #0b0c0e;
+  color: var(--knockout);
 }
 .lyr-toggle {
   width: 100%;
@@ -1643,7 +1748,7 @@ button {
   font-family: var(--mono);
   font-size: 10px;
   letter-spacing: 0.04em;
-  color: #0b0c0e;
+  color: var(--knockout);
   background: var(--accent);
   border: none;
   padding: 6px 12px;
@@ -1653,8 +1758,8 @@ button {
 /* install hint */
 .install-hint {
   position: absolute;
-  left: 10px;
-  right: 10px;
+  left: calc(env(safe-area-inset-left, 0px) + 10px);
+  right: calc(env(safe-area-inset-right, 0px) + 10px);
   bottom: calc(env(safe-area-inset-bottom, 0px) + 10px);
   z-index: 24;
   background: var(--bg-sheet);
@@ -1758,24 +1863,24 @@ button {
 }
 .sky-ring {
   fill: none;
-  stroke: rgba(233, 228, 214, 0.11);
+  stroke: rgba(var(--ink-rgb), 0.11);
   stroke-width: 0.5;
 }
 .sky-ring.rim {
-  stroke: rgba(233, 228, 214, 0.28);
+  stroke: rgba(var(--ink-rgb), 0.28);
   stroke-width: 0.6;
 }
 .sky-spoke {
-  stroke: rgba(233, 228, 214, 0.05);
+  stroke: rgba(var(--ink-rgb), 0.05);
   stroke-width: 0.5;
 }
 .sky-spoke.card {
-  stroke: rgba(233, 228, 214, 0.09);
+  stroke: rgba(var(--ink-rgb), 0.09);
 }
 .sky-sweep {
   transform-origin: 0 0;
   animation: ms_sweep 12s linear infinite;
-  fill: rgba(233, 228, 214, 0.06);
+  fill: rgba(var(--ink-rgb), 0.06);
 }
 .sky-ring-lbl {
   fill: var(--fg-4);
@@ -1830,7 +1935,7 @@ button {
 .sky-lbl {
   font-family: var(--mono);
   font-size: 5px;
-  fill: rgba(233, 228, 214, 0.7);
+  fill: rgba(var(--ink-rgb), 0.7);
 }
 .sky-lbl.sel {
   fill: var(--ink-bright);
@@ -1846,7 +1951,7 @@ button {
   font-family: var(--mono);
   font-size: 12px;
   letter-spacing: 0.04em;
-  color: #0b0c0e;
+  color: var(--knockout);
   background: var(--accent);
   border: none;
   padding: 11px 18px;
@@ -1954,4 +2059,96 @@ input[type="range"] {
     border-left: 1px solid var(--rule);
     border-right: 1px solid var(--rule);
   }
+}
+
+/* ============================================================
+   MAP VECTORS — themed via class, not baked hex
+   Leaflet writes stroke/fill as SVG presentation attributes, which don't
+   reliably resolve var(); styling by class keeps the map on the tokens.
+   ============================================================ */
+
+.v-ring { stroke: var(--v-ring); fill: none; }
+.v-home { stroke: var(--accent); fill: var(--accent); }
+.v-runway { stroke: var(--v-runway); fill: none; }
+.v-taxiway { stroke: var(--v-taxiway); fill: none; }
+.v-apron { stroke: var(--v-apron-line); fill: var(--v-apron); }
+.v-route,
+.v-route-leg { stroke: var(--accent); fill: none; }
+.v-apt { stroke: var(--accent); fill: var(--v-apt-fill); }
+
+/* ============================================================
+   AIRFIELD SYMBOLS
+   Sectional-style "there is a field here" markers, so you can see what's
+   worth zooming into before the runway detail layer kicks in at z13.
+   ============================================================ */
+
+.af-divicon {
+  background: none;
+  border: none;
+}
+.af {
+  position: relative;
+  display: block;
+  width: 10px;
+  height: 10px;
+}
+.af-ring {
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  border: 1.5px solid var(--fg-2);
+  box-sizing: border-box;
+}
+/* Large/towered fields read as a filled disc; regionals a ring; small
+   fields a modest dot — the same hierarchy a sectional uses. */
+.af-r0 .af-ring {
+  border-color: var(--ink);
+  background: var(--ink);
+  box-shadow: 0 0 0 2px var(--bg-scope);
+}
+.af-r1 .af-ring {
+  border-color: var(--fg-1);
+}
+.af-r2 {
+  width: 6px;
+  height: 6px;
+}
+.af-r2 .af-ring {
+  border-width: 1px;
+  border-color: var(--fg-3);
+}
+.af-id {
+  position: absolute;
+  left: 13px;
+  top: 50%;
+  transform: translateY(-50%);
+  font-family: var(--mono);
+  font-size: 8px;
+  letter-spacing: 0.06em;
+  white-space: nowrap;
+  color: var(--fg-2);
+  text-shadow:
+    0 0 3px var(--bg),
+    0 0 3px var(--bg);
+  pointer-events: none;
+}
+.af-r0 .af-id {
+  font-size: 9px;
+  font-weight: 500;
+  color: var(--ink);
+}
+.af-r2 .af-id {
+  left: 9px;
+  font-size: 7px;
+  color: var(--fg-3);
+}
+/* On a light basemap the bone text-shadow halo disappears — invert it. */
+.basemap-light .af-id {
+  text-shadow:
+    0 0 3px rgba(255, 255, 255, 0.95),
+    0 0 3px rgba(255, 255, 255, 0.95);
+  color: #24262a;
+}
+.basemap-light .af-r0 .af-ring {
+  box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.9);
 }

@@ -52,12 +52,15 @@ export interface AirspaceState {
   overlays: Record<string, boolean>; // weather overlay id -> enabled
   basemap: string; // active basemap id (see lib/mapLayers BASEMAPS)
   chartMode: "radar" | "sectional"; // central view: SVG scope vs. Leaflet map
+  theme: "night" | "day"; // Airspace Mono ink-on-black vs. Foolscap paper
   skyHeadingOffset: number; // manual Sky HUD compass fine-tune, degrees (persisted)
 
   // actions
   toggleOverlay: (id: string) => void;
   setBasemap: (id: string) => void;
   setChartMode: (mode: "radar" | "sectional") => void;
+  setTheme: (t: "night" | "day") => void;
+  toggleTheme: () => void;
   setHome: (lat: number, lon: number, opts?: { radiusNm?: number; label?: string }) => void;
   setRadius: (radiusNm: number) => void;
   setMapCenter: (lat: number, lon: number) => void;
@@ -95,9 +98,10 @@ export const useAirspace = create<AirspaceState>()(
       enrichments: {},
 
       followSelected: false,
-      overlays: { radar: false, satellite: false, airports: false },
+      overlays: { radar: false, satellite: false, airports: false, airfields: true },
       basemap: "dark",
       chartMode: "radar",
+      theme: "night",
       skyHeadingOffset: 0,
 
       toggleOverlay: (id) =>
@@ -106,6 +110,25 @@ export const useAirspace = create<AirspaceState>()(
       setBasemap: (id) => set({ basemap: id }),
 
       setChartMode: (mode) => set({ chartMode: mode }),
+
+      // Day mode also swaps to a light basemap (and back), since a paper theme
+      // over dark tiles reads as a bug rather than a choice.
+      setTheme: (t) =>
+        set((s) => ({
+          theme: t,
+          basemap:
+            t === "day"
+              ? s.basemap === "dark"
+                ? "light"
+                : s.basemap
+              : s.basemap === "light"
+                ? "dark"
+                : s.basemap,
+        })),
+      toggleTheme: () => {
+        const cur = useAirspace.getState();
+        cur.setTheme(cur.theme === "night" ? "day" : "night");
+      },
 
       setHome: (lat, lon, opts) =>
         set((s) => ({
@@ -181,6 +204,7 @@ export const useAirspace = create<AirspaceState>()(
         overlays: s.overlays,
         basemap: s.basemap,
         chartMode: s.chartMode,
+        theme: s.theme,
         skyHeadingOffset: s.skyHeadingOffset,
       }),
     }

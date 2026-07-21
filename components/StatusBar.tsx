@@ -34,8 +34,8 @@ export default function StatusBar({ onOpenLocation }: { onOpenLocation: () => vo
       <div className="ts-row">
         <button className="ts-brand" onClick={onOpenLocation} aria-label="change scan location">
           <svg className="ts-mark" width="12" height="12" viewBox="0 0 12 12" aria-hidden>
-            <path d="M6 0v12M0 6h12" stroke="#ece7d8" strokeWidth="0.8" />
-            <circle cx="6" cy="6" r="3.4" fill="none" stroke="#ece7d8" strokeWidth="0.8" />
+            <path d="M6 0v12M0 6h12" stroke="currentColor" strokeWidth="0.8" />
+            <circle cx="6" cy="6" r="3.4" fill="none" stroke="currentColor" strokeWidth="0.8" />
           </svg>
           <span className="ts-wordmark">AIRSPACE</span>
         </button>

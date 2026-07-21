@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useAirspace } from "@/store/useAirspace";
 import MapView from "@/components/MapView";
 import Scope from "@/components/Scope";
@@ -22,6 +22,16 @@ import InstallHint from "@/components/InstallHint";
 export default function Home() {
   const [panel, setPanel] = useState<Panel>(null);
   const chartMode = useAirspace((s) => s.chartMode);
+  const theme = useAirspace((s) => s.theme);
+
+  // Theme lives on <html> so the token overrides reach the body background and
+  // the iOS status-bar color too, not just what's inside .app.
+  useEffect(() => {
+    const root = document.documentElement;
+    root.setAttribute("data-theme", theme);
+    const meta = document.querySelector('meta[name="theme-color"]');
+    if (meta) meta.setAttribute("content", theme === "day" ? "#e8e2d0" : "#16181d");
+  }, [theme]);
 
   return (
     <main className="app">

@@ -47,6 +47,42 @@ function hostAllowed(host: string): boolean {
   return true; // public host -> allow (personal use)
 }
 
+const BROWSER_HEADERS: Record<string, string> = {
+  // present as a normal browser; many ATC relays gate on this
+  "User-Agent":
+    "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 Safari/605.1.15",
+  Referer: "https://www.liveatc.net/",
+  Accept: "audio/mpeg, audio/aac, audio/ogg, */*",
+  // deliberately NOT requesting Icy-MetaData so we get a clean audio stream
+};
+
+const PLAYLIST_TYPES = [
+  "audio/x-scpls",
+  "application/pls+xml",
+  "audio/x-mpegurl",
+  "audio/mpegurl",
+  "application/x-mpegurl",
+];
+
+function looksLikePlaylist(url: URL, contentType: string): boolean {
+  if (/\.(pls|m3u)$/i.test(url.pathname)) return true;
+  return PLAYLIST_TYPES.some((t) => contentType.includes(t));
+}
+
+// A .pls is an INI playlist (`File1=http://...`); a .m3u is one URL per line.
+// <audio> can't decode either — it needs the stream they point AT. This is the
+// same resolution a desktop media player does with LiveATC's "launches your MP3
+// player" link; we just do it server-side so the phone gets playable audio.
+function parsePlaylist(body: string): string | null {
+  const pls = body.match(/^\s*File\d*\s*=\s*(\S+)\s*$/im);
+  if (pls) return pls[1];
+  for (const line of body.split(/\r?\n/)) {
+    const t = line.trim();
+    if (t && !t.startsWith("#") && /^https?:\/\//i.test(t)) return t;
+  }
+  return null;
+}
+
 export async function GET(req: NextRequest) {
   const src = req.nextUrl.searchParams.get("src");
   if (!src) return new Response("missing src", { status: 400 });
@@ -64,16 +100,52 @@ export async function GET(req: NextRequest) {
     return new Response("host not allowed", { status: 403 });
   }
 
+  // Resolve playlist indirection first (max 2 hops), re-running the SSRF guard on
+  // every hop so a playlist can't redirect us at a private host.
+  try {
+    for (let hop = 0; hop < 2; hop++) {
+      if (!/\.(pls|m3u)$/i.test(target.pathname)) break;
+      const res = await fetch(target.toString(), {
+        headers: BROWSER_HEADERS,
+        signal: req.signal,
+        cache: "no-store",
+        redirect: "follow",
+      });
+      const ct = res.headers.get("content-type") || "";
+      if (!res.ok) return new Response(`playlist ${res.status}`, { status: 502 });
+      if (ct.includes("text/html")) {
+        // LiveATC serves its homepage for an unknown/retired feed slug rather
+        // than a 404 — the single most common cause of a silent channel.
+        return new Response(
+          "feed not found — that playlist name no longer exists upstream (check the .pls link on the feed page)",
+          { status: 502 }
+        );
+      }
+      const body = await res.text();
+      const next = parsePlaylist(body);
+      if (!next) return new Response("playlist had no stream url", { status: 502 });
+      let nextUrl: URL;
+      try {
+        nextUrl = new URL(next, target);
+      } catch {
+        return new Response("playlist had a bad stream url", { status: 502 });
+      }
+      if (nextUrl.protocol !== "http:" && nextUrl.protocol !== "https:") {
+        return new Response("unsupported scheme", { status: 400 });
+      }
+      if (!hostAllowed(nextUrl.hostname)) {
+        return new Response("host not allowed", { status: 403 });
+      }
+      target = nextUrl;
+    }
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : "playlist error";
+    return new Response(msg, { status: 502 });
+  }
+
   try {
     const upstream = await fetch(target.toString(), {
-      headers: {
-        // present as a normal browser; many ATC relays gate on this
-        "User-Agent":
-          "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 Safari/605.1.15",
-        Referer: "https://www.liveatc.net/",
-        Accept: "audio/mpeg, audio/aac, audio/ogg, */*",
-        // deliberately NOT requesting Icy-MetaData so we get a clean audio stream
-      },
+      headers: BROWSER_HEADERS,
       signal: req.signal,
       cache: "no-store",
       redirect: "follow",
@@ -90,6 +162,11 @@ export async function GET(req: NextRequest) {
       return new Response("upstream returned HTML (likely a challenge page)", {
         status: 502,
       });
+    }
+    // A playlist here means the indirection above didn't unwrap (e.g. a stream
+    // host that hands back another .pls) — <audio> would silently fail on it.
+    if (looksLikePlaylist(target, ct)) {
+      return new Response("upstream returned a playlist, not audio", { status: 502 });
     }
 
     return new Response(upstream.body, {
